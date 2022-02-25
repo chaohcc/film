@@ -3,8 +3,8 @@ a fully learned index for larger-than-memory databases
 
 
 ## the preformance of record size
-
-<img src="https://user-images.githubusercontent.com/51820918/155705363-76a679d3-488a-479e-bfa2-7519077f97c8.pngg" width="50%" height="50%">
+the model size comparison of differnet methods in terms of record size
+<img src="https://user-images.githubusercontent.com/51820918/155705363-76a679d3-488a-479e-bfa2-7519077f97c8.png" width="50%" height="50%">
 
 ![recordSizewiki_ts_add](https://user-images.githubusercontent.com/51820918/155705150-5a7aa409-503d-4ef0-9e06-ef00f2fc7db8.png)
 
