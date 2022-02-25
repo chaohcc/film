@@ -5,13 +5,14 @@ a fully learned index for larger-than-memory databases
 ## the preformance of record size
 the model size comparison of differnet methods in terms of record size.
 
-<img src="https://user-images.githubusercontent.com/51820918/155710245-68bd16c0-8e0c-487d-9b74-51d34bd0871b.png" width="50%" height="50%">
+<img src="https://user-images.githubusercontent.com/51820918/155710404-2abb0e9a-7a74-4718-b47c-8bceddbb463c.png" width="50%" height="50%">
+
 
 ![recordSizewiki_ts_add](https://user-images.githubusercontent.com/51820918/155705150-5a7aa409-503d-4ef0-9e06-ef00f2fc7db8.png)
 
 ## the range query performance with different amount of available memory 
 
-<img src="https://user-images.githubusercontent.com/51820918/155710029-6d5fac62-2847-4835-9b07-7bf6466a215d.png" width="50%" height="50%">
+<img src="https://user-images.githubusercontent.com/51820918/155710245-68bd16c0-8e0c-487d-9b74-51d34bd0871b.png" width="50%" height="50%">
 
 
 ## dataset
