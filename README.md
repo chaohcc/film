@@ -5,7 +5,7 @@ a fully learned index for larger-than-memory databases
 ## the preformance of record size
 the model size comparison of differnet methods in terms of record size.
 
-<img src="https://user-images.githubusercontent.com/51820918/155705363-76a679d3-488a-479e-bfa2-7519077f97c8.png" width="50%" height="50%">
+<img src="https://user-images.githubusercontent.com/51820918/155710245-68bd16c0-8e0c-487d-9b74-51d34bd0871b.png" width="50%" height="50%">
 
 ![recordSizewiki_ts_add](https://user-images.githubusercontent.com/51820918/155705150-5a7aa409-503d-4ef0-9e06-ef00f2fc7db8.png)
 
