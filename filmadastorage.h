@@ -23,16 +23,17 @@ namespace filmstorage {
     class filmmemory{
     public:
         int totalnum;
-        int inpageid = 0;
+        unsigned int inpageid = 0;
         double threshold;
+        double reserveMem;
         index_type *index;  //
         lru_type *lru;
-        vector<pair<unsigned int,unsigned short int>> evicttable;  // pageid , offset in page
+        vector<pair<unsigned int,unsigned int>> evicttable;  // pageid , offset in page
         vector<key_type> evictkey;   // the evicted key, used in debug
-        vector<pair<unsigned int,unsigned short int>*> evictPoss;
+        vector<pair<unsigned int,unsigned int>*> evictPoss;
 
 
-        filmmemory( int numkey,double Threshold, index_type *filmtree , lru_type *LRU){
+        filmmemory( unsigned int numkey,double Threshold, index_type *filmtree , lru_type *LRU){
             totalnum = numkey;
             threshold = Threshold;
             evicttable.reserve(numkey);
@@ -43,14 +44,22 @@ namespace filmstorage {
 
 
         void insert(const std::vector<key_type> keys,const std::vector<key_type> payload,const int error,const int error_recursize ){
-            index->build(keys,payload,error,error_recursize,lru);
+            index->build(keys,payload,error,error_recursize,lru);    // batch update
         }
 
         void append(const std::vector<key_type> keys,const std::vector<key_type> payload,const int error,const int error_recursize ){
-            index->update_append(keys,payload,error,error_recursize,lru);
+            index->update_append(keys,payload,error,error_recursize,lru);    // append-only insertion
             totalnum += 1;
         }
 
+        void cache_append(const std::vector<key_type> keys,const std::vector<key_type> payload,const int error,const int error_recursize ){
+            index->batch_append(keys,payload,error,error_recursize,lru);    // append-only insertion optimized by cache
+            totalnum += 1;
+        }
+
+        void update(const std::vector<key_type> keys,const std::vector<key_type> payload){
+            index->update_random(keys,payload,lru);    // out-of-order insertion
+        }
 
         struct memoryusage
         {
@@ -75,7 +84,7 @@ namespace filmstorage {
             int pagesize;
             int freespace;
             int recordnum;
-            inmempage(int idinpage,int sizepage,int numrecord){
+            inmempage(unsigned int idinpage,int sizepage,int numrecord){
                 pageid = idinpage;
                 pagesize = sizepage;
                 freespace = pagesize;
@@ -197,8 +206,8 @@ namespace filmstorage {
 
         }
 
-        pair<unsigned int, unsigned short int>* writeevicttable(pair<int, short int> pospage,pair<unsigned int, unsigned short int>* evictpos){
-            pair<unsigned int,unsigned short int>* oldpospage = evictpos;
+        pair<unsigned int, unsigned int>* writeevicttable(pair<int, short int> pospage,pair<unsigned int, unsigned int>* evictpos){
+            pair<unsigned int,unsigned int>* oldpospage = evictpos;
             evictpos->first = pospage.first;
             evictpos->second = pospage.second;
             return oldpospage;
@@ -207,7 +216,7 @@ namespace filmstorage {
 //            evictpos->second = pospage.second;
         }
 
-        pair<unsigned int,unsigned short int>*  writeevicttable(pair<unsigned int, unsigned short int> pospage){
+        pair<unsigned int,unsigned int>*  writeevicttable(pair<unsigned int, unsigned int> pospage){
             int evictpos = evicttable.size();
 //            evictkey.push_back(key);
             evicttable.push_back(pospage);
@@ -303,7 +312,7 @@ namespace filmstorage {
             return num;
         }
 
-        void evictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,pair<unsigned int,unsigned short int>* evictpos){
+        void evictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,pair<unsigned int,unsigned int>* evictpos){
 
             if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就向该页写出，如果不能，那么就将当前的inpage写出disk，创建新的inpage
             {
@@ -313,17 +322,17 @@ namespace filmstorage {
                 inpage->recordnum -=1;
 
             }
-            unsigned short int offset = inpage->inmemdata.size();
+            unsigned int offset = inpage->inmemdata.size();
             inpage->inmemdata.push_back(ekey);
             inpage->freespace -= 1;
             inpage->inmemdata.insert( inpage->inmemdata.begin()+(inpage->pagesize - inpage->freespace),edata.begin(),edata.end());
             inpage->freespace -= (index->valuesize);
 //            short int offset2 = (inpage->pagesize - index->valuesize-1 - inpage->freespace);
-            writeevicttable(pair<unsigned int,unsigned short int>(inpage->pageid, offset),evictpos);
+            writeevicttable(pair<unsigned int,unsigned int>(inpage->pageid, offset),evictpos);
 
         }
 
-        int rangeevictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,pair<unsigned int,unsigned short int>* evictpos){
+        int rangeevictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,pair<unsigned int,unsigned int>* evictpos){
             int num =0;
             if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
             {
@@ -521,8 +530,15 @@ namespace filmstorage {
 
 
 
-        bool runtimejudgetrans(){
+        template<typename stat_type>
+        bool runtimejudgetrans(stat_type range_stats){
+            struct timeval ct1, ct2;
+            double ctimeuse;
+            gettimeofday(&ct1, NULL);
             memoryusage res_memusage = runtimecomputeMemUsage();
+            gettimeofday(&ct2, NULL);
+            ctimeuse = (ct2.tv_sec - ct1.tv_sec) + (double) (ct2.tv_usec - ct1.tv_usec) / 1000000.0;
+            range_stats.computetimeuse += ctimeuse;
             if (res_memusage.totalusemem > threshold) //perform transfer process
                 // 判断如果全部数据写出去都不能满足larger-than-memory data set
                 return true;
@@ -622,7 +638,7 @@ namespace filmstorage {
         }
 
         // use the system o_direct mode to read file
-        vector<key_type> odirectreadfromdisk(pair<unsigned int,unsigned short int>* diskpos){
+        vector<key_type> odirectreadfromdisk(pair<unsigned int,unsigned int>* diskpos){
             int fd;
             key_type *buf;
             vector<key_type> res;

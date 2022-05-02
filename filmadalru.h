@@ -183,13 +183,20 @@ namespace adalru {
             return pair<bool,Node<Key, Value>*> (true,node);
         }
 
-//        pair<bool,Node<Key, Value>*>  put(Value data) {
-//
-//            Node<Key, Value> *node = new Node<Key, Value>(data[0], data);
-//            size += 1;
-//            appendhead(node);
-//            return pair<bool,Node<Key, Value>*> (true,node);
-//        }
+        // modify the offset (key in lru node), 所有 nodes 中，key > pos 都都需要+ 1
+        void  modify(size_t pos) {
+            // 遍历 intro chain
+            // while 循环，直到找到node->key == k;
+            Node<Key, Value> *node = head->next;
+            while (node != tail)
+            {
+                if (node->key > pos)
+                {
+                    node->key += 1;
+                }
+                node = node->next;
+            }
+        }
 
 
         //remove the k node from LRU
