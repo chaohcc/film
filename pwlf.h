@@ -5,8 +5,6 @@
 #ifndef FILMINSERT_PWLF_H
 #define FILMINSERT_PWLF_H
 
-
-
 #include <cmath>
 #include <limits>
 #include <vector>
@@ -18,15 +16,17 @@
 #include <iostream>
 #include "film.h"
 
-
-
 using namespace std;
 namespace filminsert::internal{
-//    std::conditional_t< 条件std::is_floating_point_v<T>, 条件为真 则 long double,条件为假 则 std::conditional_t<(sizeof(T) < 8), int64_t, __int128>>;
-    template<typename T>    // std::is_floating_point_v<T>  检查T 是否为浮点类型，是则为true， else false
+
+    /*
+     * some code comes from PGM-index building pwlf
+     */
+
+    template<typename T>
     using LargeSigned = typename std::conditional_t<std::is_floating_point_v<T>,
             long double,
-            std::conditional_t<(sizeof(T) <8), int64_t, __int128>>;  // chaochao modify  "< " to <=
+            std::conditional_t<(sizeof(T) <8), int64_t, __int128>>;
 
     template<typename X, typename Y>
     class insertPWLF{
@@ -36,7 +36,7 @@ namespace filminsert::internal{
             SX dx{};
             SY dy{};
 
-            bool operator<(const Slope &p) const { return dy * p.dx < dx * p.dy; }  // operator 运算符重载
+            bool operator<(const Slope &p) const { return dy * p.dx < dx * p.dy; }
             bool operator>(const Slope &p) const { return dy * p.dx > dx * p.dy; }
             bool operator==(const Slope &p) const { return dy * p.dx == dx * p.dy; }
             bool operator!=(const Slope &p) const { return dy * p.dx != dx * p.dy; }
@@ -60,7 +60,7 @@ namespace filminsert::internal{
         size_t upper_start = 0;
         size_t points_in_hull = 0;
         Point rectangle[4];
-        queue< Point > buffqueue;   // buffqueue.size() 返回队列的个数，buffqueue.empty() 判断队列是否为空
+        queue< Point > buffqueue;
 
 
 
@@ -81,13 +81,13 @@ namespace filminsert::internal{
             if (epsilon < 0)
                 throw std::invalid_argument("epsilon cannot be negative");
 
-            upper.reserve(1u << 16);  // reserve, 告知容器应该准备保存多少元素，不改变容器中元素的数量，仅影响容器预先分配多少的内存空间
+            upper.reserve(1u << 16);
             lower.reserve(1u << 16);
 
         }
         explicit insertPWLF() : epsilon(), lower(), upper() {
 
-            upper.reserve(1u << 16);  // reserve, 告知容器应该准备保存多少元素，不改变容器中元素的数量，仅影响容器预先分配多少的内存空间
+            upper.reserve(1u << 16);
             lower.reserve(1u << 16);
         }
 
@@ -217,9 +217,7 @@ namespace filminsert::internal{
                     lower.push_back(rectangle[2] );
                     points_in_hull += 2;
                 }
-//                else{
-//                    cout<< "my Lord, i need You! please have pity on me!!"  << endl;
-//                }
+
 
                 return true;
             }
@@ -407,32 +405,20 @@ namespace filminsert::internal{
         size_t c = 0;
         size_t start = 0;
         std::vector<key_type> startkeys;
-//        if (k>0){
-//            cout << " Jesus, i need You!" << endl;
-//        }
-//        if (k>1){
-//            cout << " Jesus, i need You!" << endl;
-//        }
+
 
 
         for (size_t i = 0; i < keys.size(); ++i) {
-            pair<key_type,int> p(keys[i],filmada->innerlevels[k]->nextpos++) ;   // i 为 pos
+            pair<key_type,int> p(keys[i],filmada->innerlevels[k]->nextpos++) ;
             ++(filmada->innerlevels[k]->pos);
-            if (!filmada->innerlevels[k]->opt[0]->add_point(p.first, p.second)) {  // 如果inner level  不满足error 了，那么再创建一个innerpiece
-//                if (k>0){
-////                    cout << " Jesus, i need You!" << endl;
-//                }
-//                if (k>1){
-////                    cout << " Jesus, i need You!" << endl;
-//                }
-                // 当前 innerpiece 不再满足，需要创建new inner piece 并判断该 innerlevel 的上一层level 是否需要更新
+            if (!filmada->innerlevels[k]->opt[0]->add_point(p.first, p.second)) {
+
                 auto a = filmada->innerlevels[k]->opt[0]->get_segment();
 
                 if (filmada->innerlevels[k]->pos > 2)
                     filmada->innerlevels[k]->innerpieces.pop_back();
                 filmada->innerlevels[k]->innerpieces.emplace_back(a);
-                // 首先在该层创建一个 new innerpiece， 更新该innerpiece，再递归向向上
-//                    typename filmtype::Innerpiece *innerpiece = new typename filmtype::;
+
                 filmada->innerlevels[k]->pos = 0;
                 filmada->innerlevels[k]->nextpos -= 2;
                 delete filmada->innerlevels[k]->opt[0];
@@ -465,23 +451,22 @@ namespace filminsert::internal{
                     filmada->innerlevels.emplace_back(innerlevel);
                     filmada->innerlevels.back()->opt.push_back(inneropt) ;
                     auto rr = append_segmentation(error,startkeys,filmada,k+1);
-//                    cout<< "Jesus, i need You !"  << endl;
+
                     startkeys.emplace_back(a.first);
                     return std::pair<size_t,std::vector<key_type> >(++c,startkeys) ;
                 }
-                else if (filmada->innerlevels.size() > 1 & k != filmada->innerlevels.size()-1 )   // 如上为 由于创建了new innner piece，导致了new innerlevel，如下为，虽然创建了new innerpiece，但只需要更新上层的innner level
+                else if (filmada->innerlevels.size() > 1 & k != filmada->innerlevels.size()-1 )
                 {
-                    // 更新上层的最后一个inner piece
+
                     startkeys.pop_back();
                     auto rr = append_segmentation(error,startkeys,filmada,k+1);
                     startkeys.clear();
-//                    cout << "thank You, my Lord! i need You!"<<endl;
+
                     startkeys.emplace_back(a.first);
                     return std::pair<size_t,std::vector<key_type> >(++c,startkeys) ;
                 }
-                else if (filmada->innerlevels.size() > 1 & k == filmada->innerlevels.size()-1 )   // 如上为 由于创建了new innner piece，导致了new innerlevel，如下为，虽然创建了new innerpiece，但只需要更新上层的innner level
+                else if (filmada->innerlevels.size() > 1 & k == filmada->innerlevels.size()-1 )
                 {
-                    cout << "thank You, my Lord! i need You!"<<endl;
                     startkeys.clear();
                     return std::pair<size_t,std::vector<key_type> >(++c,startkeys) ;
                 }
@@ -552,36 +537,32 @@ namespace filminsert::internal{
             else
             {
                 start = inkeynum;
-//                if (start == 85741){
-//                    cout<< " i need You, my Lord!"<< endl;
-//                }
-                auto a = filmada ->leaflevel.opt[0]->get_segment(keys[--inkeynum]); // 将生成的new leaf piece插入到leaflevel 中
+
+                auto a = filmada ->leaflevel.opt[0]->get_segment(keys[--inkeynum]);
                 filmada->m_tailleaf->update(a);
                 filmada ->leaflevel.leafpieces.emplace_back( filmada->m_tailleaf);
                 interchain->put(filmada->m_tailleaf->startkey,filmada->m_tailleaf);
-                // 这里是初始化 parent piece 的first key 和 last key
+
                 if (filmada->innerlevels.size() == 0){
                     startkeys.emplace_back( filmada->m_tailleaf->startkey);
                     startkeys.emplace_back( p.first);
-                    typename filmtype:: Innerpiece innerpiece;// 创建parent piece
+                    typename filmtype:: Innerpiece innerpiece;
                     insertPWLF<key_type, int> *inneropt = new insertPWLF<key_type, int>(error);
 //                    std::pair< std::vector<typename filmtype:: Innerpiece>, std::vector<internal::insertPWLF<key_type, int>*> > *innerlevel =
 //                            new std::pair< std::vector<typename filmtype:: Innerpiece>, std::vector<internal::insertPWLF<key_type, int>*> >;
                     typename filmtype::Innerlevel *innerlevel = new typename filmtype::Innerlevel;
                     filmada->innerlevels.emplace_back(innerlevel);
                     filmada->innerlevels[0]->opt.push_back(inneropt) ;
-                    cout << " my Lord, Jesus, please have pity on me"<< endl;
+
                 }
                 else{
-                    // 从innerlevel 的最底层到root 层，判断是否需要更新
+
                     startkeys.emplace_back( p.first);
-//                    cout << "my lovely Lord, i trust in You!" << endl;
+
                 }
                 auto rr = append_segmentation(error,startkeys,filmada,0);
                 startkeys.clear();
-//                cout << "Jesus, i need You!!"<< endl;
                 pos = 0;
-
                 filmada->m_tailleaf = new leaf_type;
                 filmada->m_tailleaf->slotkey.reserve(8192*40);
                 ++c;
@@ -603,32 +584,20 @@ namespace filminsert::internal{
         size_t c = 0;
         size_t start = 0;
         std::vector<key_type> startkeys;
-//        if (k>0){
-//            cout << " Jesus, i need You!" << endl;
-//        }
-//        if (k>1){
-//            cout << " Jesus, i need You!" << endl;
-//        }
+
 
 
         for (size_t i = 0; i < keys.size(); ++i) {
             pair<key_type,int> p(keys[i],filmada->innerlevels[k]->nextpos++) ;   // i 为 pos
             ++(filmada->innerlevels[k]->pos);
             if (!filmada->innerlevels[k]->opt[0]->add_point(p.first, p.second)) {  // 如果inner level  不满足error 了，那么再创建一个innerpiece
-//                if (k>0){
-////                    cout << " Jesus, i need You!" << endl;
-//                }
-//                if (k>1){
-////                    cout << " Jesus, i need You!" << endl;
-//                }
-                // 当前 innerpiece 不再满足，需要创建new inner piece 并判断该 innerlevel 的上一层level 是否需要更新
+
                 auto a = filmada->innerlevels[k]->opt[0]->get_segment();
 
                 if (filmada->innerlevels[k]->pos > 2)
                     filmada->innerlevels[k]->innerpieces.pop_back();
                 filmada->innerlevels[k]->innerpieces.emplace_back(a);
-                // 首先在该层创建一个 new innerpiece， 更新该innerpiece，再递归向向上
-//                    typename filmtype::Innerpiece *innerpiece = new typename filmtype::;
+
                 filmada->innerlevels[k]->pos = 0;
                 filmada->innerlevels[k]->nextpos -= 2;
                 delete filmada->innerlevels[k]->opt[0];
@@ -636,16 +605,16 @@ namespace filminsert::internal{
                 insertPWLF<key_type, int> *inneropt = new insertPWLF<key_type, int>(error);
                 filmada->innerlevels[k]->opt.emplace_back(inneropt);
                 if (k==0){
-                    auto aaaaa = filmada->leaflevel.leafpieces.size()-2;
+                    //auto aaaaa = filmada->leaflevel.leafpieces.size()-2;
                     startkeys.emplace_back(filmada->leaflevel.leafpieces[filmada->leaflevel.leafpieces.size()-1]->startkey);
                 }
 
                 else{
-                    auto aaaaa = filmada->innerlevels[k-1]->innerpieces.size()-2;
+                    //auto aaaaa = filmada->innerlevels[k-1]->innerpieces.size()-2;
                     startkeys.emplace_back(filmada->innerlevels[k-1]->innerpieces[filmada->innerlevels[k-1]->innerpieces.size()-2].startkey);
                 }
                 startkeys.emplace_back(p.first);
-                auto rr = append_segmentation(error,startkeys,filmada,k);
+                //auto rr = append_segmentation(error,startkeys,filmada,k);
 
                 ++c;
                 if (filmada->innerlevels.back()->innerpieces.size() > 1)
@@ -660,24 +629,24 @@ namespace filminsert::internal{
                     typename filmtype::Innerlevel *innerlevel = new typename filmtype::Innerlevel;
                     filmada->innerlevels.emplace_back(innerlevel);
                     filmada->innerlevels.back()->opt.push_back(inneropt) ;
-                    auto rr = append_segmentation(error,startkeys,filmada,k+1);
-//                    cout<< "Jesus, i need You !"  << endl;
+                    //auto rr = append_segmentation(error,startkeys,filmada,k+1);
+
                     startkeys.emplace_back(a.first);
                     return std::pair<size_t,std::vector<key_type> >(++c,startkeys) ;
                 }
-                else if (filmada->innerlevels.size() > 1 & k != filmada->innerlevels.size()-1 )   // 如上为 由于创建了new innner piece，导致了new innerlevel，如下为，虽然创建了new innerpiece，但只需要更新上层的innner level
+                else if (filmada->innerlevels.size() > 1 & k != filmada->innerlevels.size()-1 )
                 {
-                    // 更新上层的最后一个inner piece
+
                     startkeys.pop_back();
-                    auto rr = append_segmentation(error,startkeys,filmada,k+1);
+                    //auto rr = append_segmentation(error,startkeys,filmada,k+1);
                     startkeys.clear();
-//                    cout << "thank You, my Lord! i need You!"<<endl;
+
                     startkeys.emplace_back(a.first);
                     return std::pair<size_t,std::vector<key_type> >(++c,startkeys) ;
                 }
-                else if (filmada->innerlevels.size() > 1 & k == filmada->innerlevels.size()-1 )   // 如上为 由于创建了new innner piece，导致了new innerlevel，如下为，虽然创建了new innerpiece，但只需要更新上层的innner level
+                else if (filmada->innerlevels.size() > 1 & k == filmada->innerlevels.size()-1 )
                 {
-                    cout << "thank You, my Lord! i need You!"<<endl;
+
                     startkeys.clear();
                     return std::pair<size_t,std::vector<key_type> >(++c,startkeys) ;
                 }
@@ -736,37 +705,30 @@ namespace filminsert::internal{
         unsigned cachen = 4;
         pair<key_type,unsigned int> cache[cachen] ;
         for (inkeynum; inkeynum < keys.size(); ) {
-            // 需要在这里添加cache 的优化
-            //pair<key_type,unsigned int> next_p(keys[inkeynum],pos++) ;
+
             for (int cachei = 0; cachei < cachen; cachei ++)
             {
                 pair<key_type,unsigned int> next_p(keys[inkeynum+cachei],pos++) ;
                 cache[cachei] = next_p;
             }
 
-            //if (inkeynum != start && next_p.first == p.first)
-                //continue;
-            //if (inkeynum != start )
-                //continue;
+
             for (int cachei = 0; cachei < cachen; cachei ++){
-//                if (cache[cachei].first == 80919816)
-//                    cout << "Jesus, i need You!!" <<  endl;
+
                 if (filmada ->leaflevel.opt[0]->append_point(cache[cachei].first, cache[cachei].second)) {
                     filmada->m_tailleaf->slotkey.emplace_back(cache[cachei].first);
                     filmada->m_tailleaf->slotdata.emplace_back( filmada->m_tailleaf->intrachain.put(cache[cachei].second,payload));
                     inkeynum ++;
                 }
                 else
-                { // 插入不成功，即需要create new piece
+                {
                     start = inkeynum;
-//                if (start == 85741){
-//                    cout<< " i need You, my Lord!"<< endl;
-//                }
-                    auto a = filmada ->leaflevel.opt[0]->get_segment(keys[inkeynum]); // 将生成的new leaf piece插入到leaflevel 中， 这个是last key
+
+                    auto a = filmada ->leaflevel.opt[0]->get_segment(keys[inkeynum]);
                     filmada->m_tailleaf->update(a);
                     filmada ->leaflevel.leafpieces.emplace_back( filmada->m_tailleaf);
                     interchain->put(filmada->m_tailleaf->startkey,filmada->m_tailleaf);
-                    // 这里是初始化 parent piece 的first key 和 last key
+
                     if (filmada->innerlevels.size() == 0){
                         startkeys.emplace_back( filmada->m_tailleaf->startkey);
                         startkeys.emplace_back( cache[cachei].first);
@@ -777,16 +739,15 @@ namespace filminsert::internal{
                         typename filmtype::Innerlevel *innerlevel = new typename filmtype::Innerlevel;
                         filmada->innerlevels.emplace_back(innerlevel);
                         filmada->innerlevels[0]->opt.push_back(inneropt) ;
-                        cout << " my Lord, Jesus, please have pity on me"<< endl;
+
                     }
                     else{
-                        // 从innerlevel 的最底层到root 层，判断是否需要更新
+
                         startkeys.emplace_back( cache[cachei].first);
-//                    cout << "my lovely Lord, i trust in You!" << endl;
                     }
-                    auto rr = append_segmentation(error,startkeys,filmada,0);
+                    //auto rr = append_segmentation(error,startkeys,filmada,0);
                     startkeys.clear();
-//                cout << "Jesus, i need You!!"<< endl;
+
                     pos = 0;
 
                     filmada->m_tailleaf = new leaf_type;
@@ -831,12 +792,6 @@ namespace filminsert::internal{
         }
 
 
-//        filmada->leaflevel.opt[0]->append_point(keys[0], pos);
-//        filmada->m_tailleaf->slotdata.emplace_back( filmada->m_tailleaf->intrachain.put(pos++,payload));
-//        filmada->m_tailleaf->slotkey.push_back(keys[0]);
-//        inkeynum +=1;
-//        auto iter = filmada->m_tailleaf->slotkey.begin()+1;
-
         auto iter = filmada
                 ->m_tailleaf->slotkey.begin();
         unsigned cachen = 256;
@@ -844,50 +799,48 @@ namespace filminsert::internal{
         key_type cachekey[cachen] ;
 //        unsigned int cachepos[cachen];
         for (inkeynum; inkeynum < keys.size(); ) {
-            // 需要在这里添加cache 的优化
-            //pair<key_type,unsigned int> next_p(keys[inkeynum],pos++) ;
+
             for (cachei = 0; (inkeynum + cachei) <keys.size() and cachei < cachen; cachei ++)
             {
 //                pair<key_type,unsigned int> next_p(keys[inkeynum+cachei],pos++) ;
                 cachekey[cachei] = keys[inkeynum+cachei];
             }
             for (cachei = 0; cachei < cachen; cachei ++){
-               // if (cachekey[cachei] == 1336030)
-                    //cout << "Jesus, i need You!!" <<  endl;
+
                 if (filmada ->leaflevel.opt[0]->append_point(cachekey[cachei], pos)) {
 //                    filmada->m_tailleaf->slotkey.emplace_back(cachekey[cachei]);
                     filmada->m_tailleaf->slotdata.emplace_back( filmada->m_tailleaf->intrachain.put(pos++,payload));
                     inkeynum++;
                 }
                 else
-                { // 插入不成功，即需要create new piece
+                {
                     start = inkeynum ;
                     filmada->m_tailleaf->slotkey.insert(iter,cachekey,cachekey+cachei);
 
-                    auto a = filmada ->leaflevel.opt[0]->get_segment(keys[inkeynum-1]); // 将生成的new leaf piece插入到leaflevel 中， 这个是last key
+                    auto a = filmada ->leaflevel.opt[0]->get_segment(keys[inkeynum-1]);
                     filmada->m_tailleaf->update(a);
                     filmada ->leaflevel.leafpieces.emplace_back( filmada->m_tailleaf);
                     interchain->put(filmada->m_tailleaf->startkey,filmada->m_tailleaf);
-                    // 这里是初始化 parent piece 的first key 和 last key
+
                     if (filmada->innerlevels.size() == 0){
                         startkeys.emplace_back( filmada->m_tailleaf->startkey);
                         startkeys.emplace_back( cachekey[cachei]);
-                        typename filmtype:: Innerpiece innerpiece;// 创建parent piece
+                        typename filmtype:: Innerpiece innerpiece;/
                         insertPWLF<key_type, int> *inneropt = new insertPWLF<key_type, int>(error);
 
                         typename filmtype::Innerlevel *innerlevel = new typename filmtype::Innerlevel;
                         filmada->innerlevels.emplace_back(innerlevel);
                         filmada->innerlevels[0]->opt.push_back(inneropt) ;
-                        cout << " my Lord, Jesus, please have pity on me"<< endl;
+                        //cout << " my Lord, Jesus, please have pity on me"<< endl;
                     }
                     else{
-                        // 从innerlevel 的最底层到root 层，判断是否需要更新
+
                         startkeys.emplace_back( cachekey[cachei]);
-//                    cout << "my lovely Lord, i trust in You!" << endl;
+
                     }
-                    auto rr = append_segmentation(error,startkeys,filmada,0);
+                   // auto rr = append_segmentation(error,startkeys,filmada,0);
                     startkeys.clear();
-//                cout << "Jesus, i need You!!"<< endl;
+
                     pos = 0;
                     filmada->m_tailleaf = new leaf_type;
                     filmada->m_tailleaf->slotkey.reserve(8192*20);
@@ -916,8 +869,5 @@ namespace filminsert::internal{
     }
 
 }
-
-
-
 
 #endif //FILMINSERT_PWLF_H

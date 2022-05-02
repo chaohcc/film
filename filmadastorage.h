@@ -108,15 +108,11 @@ namespace filmstorage {
         vector<inmempage*> inmempages ;
 
         void createinmempage(int sizepage,int numrecord){
-//            if (inpageid == 2955){
-//                cout<< " my Lord, i need You!" << endl;
-//            }
+
             inmempage *curinpage = new inmempage(inpageid,sizepage,numrecord);  //create a page in memory;
             inpageid += 1;
             inpage = curinpage;
         }
-
-        // compute the usage of memory, that the total used memory by index,lru,data.addusage;
 
         memoryusage simu_computeMemUsage(int transnum){
 
@@ -199,7 +195,7 @@ namespace filmstorage {
             devied_mem.insert(pair<std::string,double>("leaves",leaves));
             devied_mem.insert(pair<std::string,double>("levels",levels));
             devied_mem.insert(pair<std::string,double>("innernodes",innernodes));
-            devied_mem.insert(pair<std::string,double>("totalusage",totalmem));  //key,flag,pageID,offset
+            devied_mem.insert(pair<std::string,double>("totalusage",totalmem));
             devied_mem.insert(pair<std::string,double>("exkeynum",exkeynum));
             memoryusage res_memusage(totalmem,devied_mem);
             return res_memusage;
@@ -212,8 +208,6 @@ namespace filmstorage {
             evictpos->second = pospage.second;
             return oldpospage;
 
-//            evictpos->first = pospage.first;
-//            evictpos->second = pospage.second;
         }
 
         pair<unsigned int,unsigned int>*  writeevicttable(pair<unsigned int, unsigned int> pospage){
@@ -225,13 +219,9 @@ namespace filmstorage {
         }
 
         unsigned int evictpagestodisk(disk_type *diskpage){
-            unsigned int num = inmempages.size();  // 此次要写入磁盘的页的数目
+            unsigned int num = inmempages.size();
             if (num > 0) {
-//                if (num >=3)
-//                {
-//                    cout << "Jesus, i need You!" <<endl;
-//                }
-//                key_type *buf;
+
                 key_type *buf = new key_type[diskpage->pagesize*num];
                 int buf_size = diskpage->pagesize * sizeof(key_type) * num;
                 long int fixed_buf_size = diskpage->pagesize * sizeof(key_type);  // 磁盘页固定的大小
@@ -242,18 +232,18 @@ namespace filmstorage {
                 lseek(fd, diskpage->nextpageid * fixed_buf_size, SEEK_SET);
 
                 if (seekoff <0){
-                    cout<< "i need You, my Lord！" << endl;
+                    cout<< "seekoff <0" << endl;
                 }
                 int offset = 0;
                 for (auto &v: inmempages) {
 //                    size_t len = sizeof(*buf);
                     memcpy(buf + offset * diskpage->pagesize, &v->inmemdata[0], v->inmemdata.size() * sizeof(key_type));
                     ++offset;
-//                cout<<"Jesus, You are my refuge! odirect sequencial write "<<endl;
+
                 }
                 ret = write(fd, buf, buf_size);
                 if (ret <= 0){
-                    cout << "Jesus, i need You!" << endl;
+                    cout << "ret <= 0" << endl;
                 }
                 diskpage->nextpageid += num;
                 free(buf);
@@ -269,13 +259,13 @@ namespace filmstorage {
 
         unsigned short int runtimeevictpagestodisk(disk_type *diskpage){
             unsigned short int pnum = inmempages.size();
-            unsigned short int num = inmempages.size();  // 此次要写入磁盘的页的数目
+            unsigned short int num = inmempages.size();
             int fd = open(diskpage->pagefile, O_RDWR | O_DIRECT, 0755);
-            unsigned int fixed_buf_size = diskpage->pagesize * sizeof(key_type);  // 磁盘页固定的大小
+            unsigned int fixed_buf_size = diskpage->pagesize * sizeof(key_type);
             lseek(fd, diskpage->nextpageid * fixed_buf_size, SEEK_SET);
             int i = 0;
             while (pnum > diskpage->blocknum) {
-                pnum -= diskpage->blocknum;    //diskpage->blocknum 表示 写出block 包含多少个page
+                pnum -= diskpage->blocknum;
                 key_type *buf = new key_type[diskpage->pagesize* diskpage->blocknum];
 
                 int buf_size = diskpage->pagesize * sizeof(key_type) * diskpage->blocknum;
@@ -314,7 +304,7 @@ namespace filmstorage {
 
         void evictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,pair<unsigned int,unsigned int>* evictpos){
 
-            if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就向该页写出，如果不能，那么就将当前的inpage写出disk，创建新的inpage
+            if (!(inpage->recordnum --))
             {
                 inmempages.emplace_back(inpage);
 //                diskpage->odirectenterpage(inpage->inmemdata);// write to disk
@@ -327,16 +317,16 @@ namespace filmstorage {
             inpage->freespace -= 1;
             inpage->inmemdata.insert( inpage->inmemdata.begin()+(inpage->pagesize - inpage->freespace),edata.begin(),edata.end());
             inpage->freespace -= (index->valuesize);
-//            short int offset2 = (inpage->pagesize - index->valuesize-1 - inpage->freespace);
+
             writeevicttable(pair<unsigned int,unsigned int>(inpage->pageid, offset),evictpos);
 
         }
 
         int rangeevictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,pair<unsigned int,unsigned int>* evictpos){
             int num =0;
-            if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
+            if (!(inpage->recordnum --))
             {
-//                inmempages.emplace_back(inpage);
+
                 diskpage->odirectenterpage(inpage->inmemdata);// write to disk
                 createinmempage(diskpage->pagesize,diskpage->recordnum);
                 inpage->recordnum -=1;
@@ -352,45 +342,9 @@ namespace filmstorage {
             return num;
         }
 
-/*
-        pair<int,short int>* evictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,pair<int,short int>* evictpos){
-            if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
-            {
-                diskpage->odirectenterpage(inpage->inmemdata);// write to disk
-                createinmempage(diskpage->pagesize,diskpage->recordnum);
-                inpage->recordnum -=1;
-            }
-            short int offset = inpage->inmemdata.size();
-            inpage->inmemdata.push_back(ekey);
-            inpage->freespace -= 1;
-            inpage->inmemdata.insert( inpage->inmemdata.begin()+(inpage->pagesize - inpage->freespace),edata.begin(),edata.end());
-            inpage->freespace -= (index->valuesize);
-//            short int offset2 = (inpage->pagesize - index->valuesize-1 - inpage->freespace);
-            pair<int,short int>* olppagepos = writeevicttable(pair<int,short int>(inpage->pageid, offset),evictpos);
-            return olppagepos;
-        }
-        */
-/*
-        pair<int,short int> evictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage,int evictpos){
-            if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
-            {
-                diskpage->odirectenterpage(inpage->inmemdata);// write to disk
-                createinmempage(diskpage->pagesize,index->recordsize+1);
-                inpage->recordnum -=1;
-            }
-            inpage->inmemdata.push_back(ekey);
-            inpage->freespace -= 1;
-            inpage->inmemdata.insert( inpage->inmemdata.begin()+(inpage->pagesize - inpage->freespace),edata.second.begin(),edata.second.end());
-            inpage->freespace -= index->recordsize;
-
-            pair<int,short int> olppagepos = writeevicttable(pair<int,short int>(inpage->pageid, (inpage->pagesize - index->recordsize -1 - inpage->freespace)),evictpos);
-            return olppagepos;
-        }
-*/
-
         pair<unsigned int,unsigned short int>* evictkeytoinpage(key_type ekey,data_type edata, disk_type *diskpage){
 
-            if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
+            if (!(inpage->recordnum --))
             {
                 diskpage->odirectenterpage(inpage->inmemdata);// write to disk
                 createinmempage(diskpage->pagesize,index->recordsize);
@@ -415,15 +369,14 @@ namespace filmstorage {
                 index->m_transleaf = index->leaflevel.leafpieces[0];
             }
             if  (transleaves == 1 && this->index->Error > 256)
-            {// 如果是这种情况，需要在一个leaf 中 批量写出，因为一次性写出leaf 所有的数据 会使得 内存的usage not full
-                // 判断该页全部数据写出去 的usage
+            {
                 auto midtransflag = simu_computeMemUsage(index->m_transleaf->slotkey.size());
                 if (midtransflag.totalusemem > threshold ){
                     for (int k = 0; k < index->m_transleaf->slotkey.size();k++)
                     {
-                        if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
+                        if (!(inpage->recordnum --))
                         {
-                            diskpage->odirectenterpage(inpage->inmemdata);// write to disk , 这里是初始化阶段，所以没有采用 odirect 的方式 ，如果采用，只需要将在enterpage 前加上odirect， 去掉则不是直接操作磁盘
+                            diskpage->odirectenterpage(inpage->inmemdata);
                             delete inpage;
                             inpage = NULL;
                             createinmempage(diskpage->pagesize,diskpage->recordnum);
@@ -447,11 +400,11 @@ namespace filmstorage {
                     index->exkeynum += index->m_transleaf->slotkey.size();
                     index->m_transleaf = index->leaflevel.leafpieces[index->leafsplit+1];//evict data from the first leaf
                     if (index->m_transleaf->startkey == 0){
-                        cout<< " Jesus, what's wrong, here? my Lord!"<< endl;
+                        cout<< "index->m_transleaf->startkey == 0 "<< endl;
                     }
                     index->leafsplit += transleaves;
                 }
-                else{  // 一点一点的写出
+                else{
                     auto midtrans = computeMemUsage();
                     int split = 0;
                     while (midtrans.totalusemem > threshold){
@@ -459,9 +412,10 @@ namespace filmstorage {
                         int trannum = ceil(index->m_transleaf->slotkey.size() * ratio+100);
                         for (int k = 0; k < trannum;k++)
                         {
-                            if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
+                            if (!(inpage->recordnum --))
                             {
-                                diskpage->odirectenterpage(inpage->inmemdata);// write to disk , 这里是初始化阶段，所以没有采用 odirect 的方式 ，如果采用，只需要将在enterpage 前加上odirect， 去掉则不是直接操作磁盘
+                                diskpage->odirectenterpage(inpage->inmemdata);
+
                                 delete inpage;
                                 inpage = NULL;
                                 createinmempage(diskpage->pagesize,diskpage->recordnum);
@@ -493,9 +447,9 @@ namespace filmstorage {
                 for (int i = 0; i< transleaves; i++){
                     for (int k = 0; k < index->m_transleaf->slotkey.size();k++)
                     {
-                        if (!(inpage->recordnum --))  //如果还能容纳一个record，那么就执行transfer，如果不能，那么就将当前的inpage写出disk，创建新的inpage
+                        if (!(inpage->recordnum --))
                         {
-                            diskpage->odirectenterpage(inpage->inmemdata);// write to disk , 这里是初始化阶段，所以没有采用 odirect 的方式 ，如果采用，只需要将在enterpage 前加上odirect， 去掉则不是直接操作磁盘
+                            diskpage->odirectenterpage(inpage->inmemdata);
                             delete inpage;
                             inpage = NULL;
                             createinmempage(diskpage->pagesize,diskpage->recordnum);
@@ -519,7 +473,7 @@ namespace filmstorage {
                     index->exkeynum += index->m_transleaf->slotkey.size();
                     index->m_transleaf = index->leaflevel.leafpieces[index->leafsplit+i+1];//evict data from the first leaf
                     if (index->m_transleaf->startkey == 0){
-                        cout<< " Jesus, what's wrong, here? my Lord!"<< endl;
+                        cout<< " index->m_transleaf->startkey == 0"<< endl;
                     }
                 }
                 index->leafsplit += transleaves;
@@ -527,7 +481,6 @@ namespace filmstorage {
 
 
         }
-
 
 
         template<typename stat_type>
@@ -540,7 +493,6 @@ namespace filmstorage {
             ctimeuse = (ct2.tv_sec - ct1.tv_sec) + (double) (ct2.tv_usec - ct1.tv_usec) / 1000000.0;
             range_stats.computetimeuse += ctimeuse;
             if (res_memusage.totalusemem > threshold) //perform transfer process
-                // 判断如果全部数据写出去都不能满足larger-than-memory data set
                 return true;
             else
                 return  false;
@@ -569,7 +521,7 @@ namespace filmstorage {
         const char *pagefile;
         int pagesize;
         int nextpageid;
-        int recordnum;  // 一个页最多容纳的 record  的数量
+        int recordnum;
         int recordsize;
         int blocknum;
         filmdisk( const char* diskfile,int sizepage,int numrecord,int sizerecord) {
@@ -590,7 +542,7 @@ namespace filmstorage {
             key_type tmp;
 
             for (int i = 0; i < pagesize; i ++){
-                fread(&tmp, sizeof(long int), 1, fdisk); // 从文件中读数
+                fread(&tmp, sizeof(long int), 1, fdisk);
                 pagedata.push_back(tmp);
 //                cout<< tmp << " ";
             }
@@ -600,7 +552,6 @@ namespace filmstorage {
             for (int i = 0; i < sizerecord; i ++){
                 res.push_back(pagedata[diskpos.second+i]);
             }
-
 //            cout<<"Jesus, You are my refuge! "<<endl;
             fclose(fdisk);
             return res;
@@ -661,37 +612,26 @@ namespace filmstorage {
             return res;
         }
 
-        int enterpage(vector<key_type> datas)   //将一个内存页，写入磁盘, doesn't consider the odirect
+        int enterpage(vector<key_type> datas)
         {
 
-            FILE *fdisk;// 读取磁盘文件
+            FILE *fdisk;
             fdisk = fopen(pagefile,"rb+");
             fseek(fdisk,nextpageid * (pagesize)*8,SEEK_SET);
             //fseek(fdisk, 0, SEEK_END);
             nextpageid += 1;
 //            cout<<datas.size()<<endl;
             for(int i = 0 ; i < datas.size() ; i++) {
-                fwrite(&datas[i], sizeof(key_type), 1, fdisk);  //就是把id里面的值读到f里面，每次读8个字节，一共读size次
+                fwrite(&datas[i], sizeof(key_type), 1, fdisk);
 //                cout << datas[i] <<" ";
             }
 
             fflush(fdisk);
             fclose(fdisk);
-//            cout<< "*********************** Jesus, finished one transfer*************************"<<endl;
-
-//            cout<< datas.size()<<endl;
-//            cout<< sizeof(datas)<<endl;
-//            vector<long int>  reads(datas.size());
-////            cout<< reads.size()<<endl;
-////            cout<< sizeof(reads)<<endl;
-//            FILE *fdisk2;
-//            fdisk2 = fopen(pagefile,"rb");
-//            fread(&reads ,  sizeof(reads) , 1 ,fdisk2); // 从文件中读数据
-//            fclose(fdisk2);
 
         }
 
-        void odirectenterpage(vector<key_type> datas)   //将一个内存页，写入磁盘,consider the odirect
+        void odirectenterpage(vector<key_type> datas)
         {
 
             int fd;
@@ -714,7 +654,7 @@ namespace filmstorage {
 
             ret = pwrite(fd, buf, buf_size,nextpageid * buf_size);
             if (ret <= 0){
-                cout << "Jesus, i need You!" << endl;
+                cout << "ret <= 0" << endl;
             }
             nextpageid += 1;
 
@@ -723,18 +663,11 @@ namespace filmstorage {
             free(buf);
             close(fd);
 
-//            cout<<datas.size()<<endl;
-//            for(int i = 0 ; i < datas.size() ; i++) {
-//                fwrite(&datas[i], sizeof(key_type), 1, fdisk);  //就是把id里面的值读到f里面，每次读8个字节，一共读size次
-//                cout << datas[i] <<" ";
-
 //            cout<< "*********************** Jesus, finished one transfer*************************"<<endl;
         }
 
     };
 }
-
-
 
 
 #endif //EXPERIMENTCC12_FILMADASTORAGE_H

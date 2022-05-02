@@ -113,12 +113,12 @@ namespace filminsert{
     class FILMinsert{
     public:
 
-        struct Leafpiece;  // 声明leafpiece 结构体
+        struct Leafpiece;  /
 
         struct sortPiece:Leafpiece{
 
             vector<key_type> slotkey;
-//        vector< pair<bool, adalru::Node<key_type, std::vector<key_type> >*  > >slotdata;
+
             vector< pair<bool, void* > > slotdata;   //adalru::Node<key_type, std::vector<key_type> >*sss
             adalru::localLRU <unsigned int,std::vector<key_type> >  intrachain;    //unsigned short int
 
@@ -159,7 +159,7 @@ namespace filminsert{
                     return true;
                 }
                 else{
-                    int begin = 0, end = slotkey.size()-1,mid;  // find last Equal or small, 找到最后一个大于或等于 key 的
+                    int begin = 0, end = slotkey.size()-1,mid;
                     while(begin <= end){
                         mid = (end + begin) / 2;
                         if(this->slotkey[mid] >= key) {
@@ -167,8 +167,8 @@ namespace filminsert{
                         } else
                             begin = mid +1;
                     }
-                    // 遍历 intrachain，所有 大于 end 的 值，都需要加1
-                    intrachain.modify(end);  // 所有 在 end 之后的，都需要加1
+
+                    intrachain.modify(end);
                     this->slotdata.insert( slotdata.begin()+end+1,intrachain.put(end+1,payload));
                     this->slotkey.insert(slotkey.begin()+end+1,key);
                     return true;
@@ -176,8 +176,6 @@ namespace filminsert{
 
             }
 
-
-            // 判断key 是否在当前leaf 中
             inline pair<bool,unsigned long> is_in_leaf(const key_type &key,const int error){
                 auto pos = (*this)(key);
                 pair<bool,unsigned long> is_in(false,0);
@@ -186,21 +184,21 @@ namespace filminsert{
                 for (; slotlo<=slothi;slotlo++){
                     if (slotlo < 0)
                     {
-                        cout<< "my Lord, please help, i trust in You!" << endl;
+                        //cout<< "slotlo < 0" << endl;
                     }
                     if (key == this->slotkey[slotlo])
                     {   is_in.first = true;
                         is_in.second = slotlo;
                         break;}
                 }
-//            cout<< " happy new year! Jesus~~~~" << endl;
+
                 return is_in;
 
             }
 
         };
-        struct Innerpiece;  // 声明leafpiece 结构体
-        struct Innerlevel;  // 声明 innerlevel 结构体，每个innerllevel 包含一个 vector<Innerpiece>,一个 opt， 一个 pos；
+        struct Innerpiece;
+        struct Innerlevel;
         struct Leaflevel;
         unsigned int totalnum;
         unsigned int inkeynum=0;
@@ -210,7 +208,7 @@ namespace filminsert{
         int ErrorRecursive ;
         int leafsplit = 0;
         Leafpiece *m_transleaf = NULL;
-        Leafpiece *m_tailleaf = NULL;   // tailpiece, 用于append increasing keys
+        Leafpiece *m_tailleaf = NULL;
         Innerpiece *i_innerpiece = NULL;
         queue< pair<key_type,unsigned int> > buffqueue;
         film_stats vstats;
@@ -245,18 +243,13 @@ namespace filminsert{
          * the method to construct film, that build FILM
          */
 
-        template<class lru_type>    // append-only fashion (one-by-one)
+        template<class lru_type>
         inline void update_append(std::vector<key_type> keys,std::vector<key_type> payload,unsigned int error,unsigned int error_recursize,lru_type &interchain ){
-            // build leaf level
-            // size_t error,std::vector<key_type> keys,std::vector<key_type> payload,
-            //filmtype *filmada, unsigned int &inkeynum,leaf_type* m_taillea
-            std::pair<size_t,std::vector<key_type>>  n_parts = internal::append_segmentation(error,keys,payload,this,inkeynum,this->m_tailleaf,interchain);   //<key_type,Leafpiece>
-//            std::cout<< "You are my refuge, from ever to ever"<<endl;
-            // on the basis of leaf level, build the upper level until just has one piece, that the make_segmentation just return 1.
+
             if (innerlevels.size()>1)
                 root = &innerlevels.back()->innerpieces[0];
             this->verify_film(&vstats);
-            cout<<"film has been built successfully, Jesus, my Lord, i need You, praise to You for ever and ever!" << endl;
+            cout<<"film has been built successfully" << endl;
 
         }
 
@@ -271,13 +264,13 @@ namespace filminsert{
             if (innerlevels.size()>=1)
                 root = &innerlevels.back()->innerpieces[0];
             this->verify_film(&vstats);
-            cout<<"film has been built successfully, Jesus, my Lord, i need You, praise to You for ever and ever!" << endl;
+            cout<<"film has been built successfully" << endl;
 
         }
 
         template<class lru_type>
         inline void update_random(std::vector<key_type> keys,std::vector<key_type> payload,lru_type &interchain){
-            // 首先search , 如果不存在，则插入，如果存在，则 pass
+
             if (sort_list == NULL)
             {
                 sort_list = new sortPiece();
@@ -296,7 +289,7 @@ namespace filminsert{
         struct result_find
         {
             /// find result flags
-            bool find;   // 在sorted list 还是在 regular data
+            bool find;
 
             /// this flag indicate whether the queried data is in memory or on disk
             bool  flags;
@@ -337,32 +330,32 @@ namespace filminsert{
          * the methods used in query, @param key is the queried key, return the leafpiece responsible for the given key
          */
         result_find search_one(const key_type key)  const{
-            // 从 root 开始，即，从root开始的结尾开始
+            //
             if (vstats.innernum > 1){
-                auto itlevel = innerlevels.end() -1; // root level 的 ittrater
+                auto itlevel = innerlevels.end() -1;
 
                 auto pos = (*root)(key);
                 auto lo = PGM_SUB_EPS(pos, ErrorRecursive + 1) + (*(--itlevel))->innerpieces.begin();  //,(--itlevel)->size()
                 auto hi = PGM_ADD_EPS(pos, ErrorRecursive,(*itlevel)->innerpieces.size()-1) + (*itlevel)->innerpieces.begin();
                 auto curit = (*(itlevel--))->innerpieces.begin();
-                // 在 low 和 high 范围内的cand;idate innerpieces  中 确定所属的 inner piece
+
                 static constexpr size_t linear_search_threshold = 8 * 64 / sizeof(Innerpiece);   //sizeof(Innerpiece)
                 if (key >= hi->startkey){curit = hi;}
                 else{
-                    if constexpr (4 <= linear_search_threshold ){   //ErrorRecursive
+                    if constexpr (4 <= linear_search_threshold ){
                         for (; std::next(lo)->startkey <= key; ++lo)
                             continue;
                         curit = lo;
                     }
-                    else{ curit = std::lower_bound(lo, hi, key);   // upper_bound 返回在前闭后开区间查找key 的上届，返回大于 key 的第一个元素位置； lower_bound 返回第一个大于或等于 key 的元素的位置
+                    else{ curit = std::lower_bound(lo, hi, key);
                     }
                 }
-                // 在lo 和 hi 的范围内，定位 key 所属的inner piec, 最后定位到leaf piece
+
                 for (; itlevel >= innerlevels.begin();--itlevel  ){
                     pos = (*curit)(key);
                     lo = PGM_SUB_EPS(pos, ErrorRecursive + 1) + (*itlevel)->innerpieces.begin();
                     hi = PGM_ADD_EPS(pos, ErrorRecursive,(*itlevel)->innerpieces.size()-1) + (*itlevel)->innerpieces.begin();
-                    // 在 low 和 high 范围内的candidate innerpieces  中 确定所属的 inner piece
+
                     static constexpr size_t linear_search_threshold = 8 * 64 / sizeof(Innerpiece);   //sizeof(Innerpiece)
                     if (key >= hi->startkey){curit = hi;}
                     else{
@@ -376,7 +369,7 @@ namespace filminsert{
                                 continue;
                             curit = lo;
                         }
-                        else{ curit = std::lower_bound(lo, hi, key);   // upper_bound 返回在前闭后开区间查找key 的上届，返回大于 key 的第一个元素位置； lower_bound 返回第一个大于或等于 key 的元素的位置
+                        else{ curit = std::lower_bound(lo, hi, key);
                         }
                     }
                 }
@@ -402,7 +395,7 @@ namespace filminsert{
                             continue;
                         curleaf = leaflo;
                     }
-                    else{ curleaf = std::lower_bound(leaflo, leafhi, key);   // upper_bound 返回在前闭后开区间查找key 的上届，返回大于 key 的第一个元素位置； lower_bound 返回第一个大于或等于 key 的元素的位置
+                    else{ curleaf = std::lower_bound(leaflo, leafhi, key);
                     }
                 }
                 Leafpiece* a = *curleaf;
@@ -420,13 +413,13 @@ namespace filminsert{
                 if (key != a->slotkey[resslot])
                 {
                     if (sort_list==NULL) {
-                        cout << " i need You, my Lord, please help me!" << endl;
+                        cout << "sort_list==NULL" << endl;
                     }
                     else {  // find in sort_list
                         auto sortpos = (*sort_list)(key);
                         if (sort_list->slotkey[sortpos+1] != key){
                             auto sss = sort_list->slotkey[sortpos+1];
-                            cout << " i need You, my Lord, please help me!" << endl;
+
                         }
                         else{
                             result_find index_res = result_find(false,sort_list->slotdata[sortpos].first,sort_list,sortpos);   // sort_list data
@@ -439,12 +432,8 @@ namespace filminsert{
                 return index_res;
             }
             else{
-
-                // 在 low 和 high 范围内的cand;idate innerpieces  中 确定所属的 inner piece
                 static constexpr size_t linear_search_threshold = 8 * 64 / sizeof(Innerpiece);   //sizeof(Innerpiece)
-//                if (key == 80728301)
-//                    cout<<key<< "  my Lord, i need You!"<<endl;
-                // leaf level
+
                 auto curleaf = leaflevel.leafpieces.begin();
                 auto pos = (*root)(key);
 //                auto l = PGM_SUB_EPS2(pos, Error + 1,leaflevel.size());
@@ -464,7 +453,7 @@ namespace filminsert{
 
                         curleaf = leaflo;
                     }
-                    else{ curleaf = std::lower_bound(leaflo, leafhi, key);   // upper_bound 返回在前闭后开区间查找key 的上届，返回大于 key 的第一个元素位置； lower_bound 返回第一个大于或等于 key 的元素的位置
+                    else{ curleaf = std::lower_bound(leaflo, leafhi, key);
                     }
                 }
                 Leafpiece* a = *curleaf;
@@ -485,15 +474,13 @@ namespace filminsert{
         }
 
         bool update_one(const key_type key, const vector<key_type> payload)  {
-            // 判断一下，如果 小于 last leaf 的end key, 则插入到sortlist 中
+
             if (key < this->m_tailleaf->endkey){
-                // 插入到 sort_list 中
+
                 this->sort_list->insert(key,payload);
 //                cout << "thank You, my Lord! " << endl ;
             }
         }
-
-
 
         /**
           * statistics information
@@ -539,8 +526,8 @@ namespace filminsert{
         {
             std::map<std::string,double> treeinfo;
 //            this->verify_film(&vstats);
-            double innodesize = 24;  // startkey, double(slope,intercept)
-            double leafnodesize = 32 ; // startkey, endkey, double(slope,intercept),  slotkey(算入了data usage 中，因为在introchain 中 只存储了value)
+            double innodesize = 24;  //
+            double leafnodesize = 32 ; //
             double hashlrusize = 48;
             double no_hashsize = 20;  //prev,next, slot-short int
             double dataV = (valuesize+1)*8;
@@ -566,13 +553,13 @@ namespace filminsert{
             std::map<std::string,double> treeinfo;
             this->verify_film(&vstats);
             double innodesize = sizeof(key_type) + 8+8;  // startkey, double(slope,intercept)
-            double leafnodesize = 2 * sizeof(key_type) + 8 + 8 ; // startkey, endkey, double(slope,intercept),  slotkey(算入了data usage 中，因为在introchain 中 只存储了value)
+            double leafnodesize = 2 * sizeof(key_type) + 8 + 8 ; //
             double hashlrusize = sizeof(key_type) + 8+ 16 + 16;
             double no_hashsize = 16+4;  //prev,next, slot-short int
             double dataV = (valuesize+1)*8;
             double datausage = double(inkeynum*(dataV))/1024/1024;
             double addusage = double((exkeynum+inkeynum)*(1+8)+exkeynum*(4+4)+exkeynum*sizeof(key_type) )/double(1048576);  // exkey, flag, pageID,offset   (pageid-int-8 offset short int), flag for data in memory
-            // addusage: (exkeynum+inkeynum)*(1+8) —— bitmap + pointer;  exkeynum*8 —— pageid(ungined int),offset(unsigned int); exkeynum*sizeof(key_type) ——exkey;
+
             double indexusge = (vstats.leaves*leafnodesize+vstats.innernum*innodesize + 8 )/double(1048576);  //  leaf nodes, inner nodes, root
             double lruusage = double(no_hashsize*inkeynum + hashlrusize * vstats.leaves)/1024/1024;
 
@@ -616,7 +603,7 @@ namespace filminsert{
 
 #pragma pack(push, 1)
     /**
-     * 开始定义 FILM 中用的的struct
+     * struct in FILM
      */
 
     template<typename key_type,typename value_type>
@@ -679,7 +666,7 @@ namespace filminsert{
             intercept = cs_intercept;
         }
 
-        // 判断key 是否在当前leaf 中
+
         inline pair<bool,unsigned long> is_in_leaf(const key_type &key,const int error){
             auto pos = (*this)(key);
             pair<bool,unsigned long> is_in(false,0);
@@ -688,96 +675,20 @@ namespace filminsert{
             for (; slotlo<=slothi;slotlo++){
                 if (slotlo < 0)
                 {
-                    cout<< "my Lord, please help, i trust in You!" << endl;
+                    //cout<< "slotlo < 0 " << endl;
                 }
                 if (key == this->slotkey[slotlo])
                 {   is_in.first = true;
                     is_in.second = slotlo;
                     break;}
             }
-//            cout<< " happy new year! Jesus~~~~" << endl;
-            return is_in;
 
+            return is_in;
         }
 
     };
 
-//    template<typename key_type,typename value_type>
-//    struct sortPiece:FILMinsert<key_type,value_type>::Leafpiece{
-//
-//        key_type startkey;
-//        unsigned int pos;
-//        key_type endkey;
-//        vector<key_type> slotkey;
-////        vector< pair<bool, adalru::Node<key_type, std::vector<key_type> >*  > >slotdata;
-//        vector< pair<bool, void* > > slotdata;   //adalru::Node<key_type, std::vector<key_type> >*sss
-//        adalru::localLRU <unsigned int,std::vector<key_type> >  intrachain;    //unsigned short int
-//
-//        sortPiece(key_type startkey,key_type endkey):
-//                startkey(startkey),endkey(endkey), pos(0){};
-//
-//        friend inline bool operator<(const sortPiece &p, const key_type &key) { return p.key < key; }
-//        friend inline bool operator<(const key_type &key, const sortPiece &p) { return key < p.key; }
-//        friend inline bool operator<(const sortPiece &p1, const sortPiece &p2) { return p1.key < p2.key; }
-//
-//        operator key_type() { return startkey; };
-//
-//        /**
-//     * Returns the approximate position of the specified key.
-//     * @param k the key whose position must be approximated
-//     * @return the approximate position of the specified key
-//     */
-//        inline size_t operator()(const key_type &key) const {
-//            size_t begin = 0, end = slotkey.size()-1,mid;  // find last Equal or small, 找到最后一个大于或等于 key 的
-//            while(begin <= end){
-//                mid = (end + begin) / 2;
-//                if(slotkey[mid] >=key) {
-//                    end = mid-1;
-//                } else
-//                    begin = mid +1;
-//            }
-//            return end;
-//        }
-//
-//        inline bool insert(const key_type key, const vector<key_type> payload) const{
-//            if (unlikely(slotkey.empty())){
-//                slotdata.emplace_back( intrachain.put(pos,payload));
-//                (*this)->pos ++;
-//                slotkey.push_back(key);
-//                return true;
-//            }
-//            else{
-//                size_t insert_p = (*this)(key);   // find last equal or small
-//                slotkey.insert(slotkey.begin()+insert_p,key);
-//                slotdata.insert(slotdata.begin()+insert_p, intrachain.put(pos,payload));
-//                (*this)->pos++;
-//            }
-//            return true;
-//        }
-//
-//
-//        // 判断key 是否在当前leaf 中
-//        inline pair<bool,unsigned long> is_in_leaf(const key_type &key,const int error){
-//            auto pos = (*this)(key);
-//            pair<bool,unsigned long> is_in(false,0);
-//            int slotlo = PGM_SUB_EPS(pos, error + 1) ;  //,(--itlevel)->size()
-//            int slothi = PGM_ADD_EPS(pos, error,(this->slotkey.size()-1));
-//            for (; slotlo<=slothi;slotlo++){
-//                if (slotlo < 0)
-//                {
-//                    cout<< "my Lord, please help, i trust in You!" << endl;
-//                }
-//                if (key == this->slotkey[slotlo])
-//                {   is_in.first = true;
-//                    is_in.second = slotlo;
-//                    break;}
-//            }
-////            cout<< " happy new year! Jesus~~~~" << endl;
-//            return is_in;
-//
-//        }
-//
-//    };
+
 
     template<typename key_type,typename value_type>
     struct FILMinsert<key_type,value_type>::Innerpiece{
@@ -828,8 +739,6 @@ namespace filminsert{
             slope = cs_slope;
             intercept = cs_intercept;
         }
-
-
     };
 
     template<typename key_type,typename value_type>
@@ -853,24 +762,23 @@ namespace filminsert{
     typedef filminsert::FILMinsert< key_type, vector<key_type> > filmadatype;
 
     typedef filminsert::FILMinsert< key_type, vector<key_type> > filmadatype;
-    typedef pair<filmadatype::Leafpiece*,unsigned short int>  filmadalrupair;  //lru 中value 的type ，是一个pair，first is 所属的leaf，second 是slot in leaf
+    typedef pair<filmadatype::Leafpiece*,unsigned short int>  filmadalrupair;
     typedef  adalru::hashLRU <key_type,filmadatype::Leafpiece* , adalru::Node<key_type ,filmadatype::Leafpiece*>* > filmadalrutype;
     typedef adalru::localLRU <unsigned short,std::vector<key_type> > locallrutype;
     typedef filmstorage::filmdisk<key_type> filmadadisk;
     typedef filmstorage::filmmemory<key_type,vector<key_type>,filmadatype, filmadalrutype,filmadadisk> filmadamemory;
     typedef filmadamemory::memoryusage memoryusage;
-    //    adalru::hashLRU <key_type,Leafpiece* , adalru::Node<key_type ,Leafpiece*>* >
+
 
     void runtimeevictkeytopage(filmadamemory *filmmem,filmadatype *filmindex,filmadadisk *diskpage , access_stats *r_stats){
         struct timeval lt1, lt2,dt1,dt2,rdt1,rdt2,wdt1,wdt2;
-        double ltimeuse,rdtimeuse,wdtimeuse;  // 读磁盘的时间，写磁盘的时间
+        double ltimeuse,rdtimeuse,wdtimeuse;
         double dtimeuse;
         if (filmmem->evictPoss.size() != 0){
             for (int i = 0; i< filmmem->evictPoss.size(); i++){
                 gettimeofday(&lt1, NULL);
                 auto writeevict =  filmmem->evictPoss[i];
 
-                // evict data, get the tail node, remove the tail of intrachain
                 auto evictleaf = filmmem->lru->get_tail();
                 auto evictslotV = evictleaf->intrachain.poptail();
                 gettimeofday(&lt2, NULL);
@@ -887,8 +795,7 @@ namespace filminsert{
             }
             filmindex->inkeynum -= filmmem->evictPoss.size();
             filmindex->exkeynum += filmmem->evictPoss.size();
-            filmmem->evictPoss.clear();
-            // 批量将inmempages写出磁盘
+
             gettimeofday(&wdt1, NULL);
             int pagenum = filmmem->runtimeevictpagestodisk(diskpage);
             r_stats->writenum += pagenum;
@@ -916,15 +823,12 @@ namespace filminsert{
                     runtimeevictkeytopage(filmmem,filmindex,pagedisk,&point_stats);
                     transflag = filmmem->runtimejudgetrans(point_stats);
                 }
-                //                cout<< "my Lord, i need You!" <<endl;
+
             }
 
             vector<key_type> res;
             key_type querykey = pqueries[i];
 
-            //if (querykey == 80920903){
-                //cout<< "my Lord, i need You!!!" <<endl;
-            //}
             auto index_res = filmindex->search_one(querykey);
 
             if ( index_res.find == false){
@@ -935,7 +839,7 @@ namespace filminsert{
                     res.insert(res.begin()+1,finddata->value.begin(),finddata->value.end());
                     filmindex->sort_list->intrachain.moveTohead(finddata);// update intrachain
                     //                totalres.emplace_back(res);
-                    // 更新 interchain
+
                     filmmem->lru->put(filmindex->sort_list->slotkey[0],filmindex->sort_list);
                 }
                 else{
@@ -948,7 +852,7 @@ namespace filminsert{
                     res.erase(res.begin());
                     index_res.findleaf->slotdata[index_res.slot] = index_res.findleaf->intrachain.put(index_res.slot,res);
 
-                    filmmem->lru->put(index_res.findleaf->startkey,index_res.findleaf);// 更新 interchain
+                    filmmem->lru->put(index_res.findleaf->startkey,index_res.findleaf);
                     filmmem->evictPoss.emplace_back(writeevict);
                     filmindex->inkeynum++;
                     filmindex->exkeynum--;
@@ -957,27 +861,27 @@ namespace filminsert{
 
             }
             else{
-                if (index_res.flags){// 从内存中读数据
+                if (index_res.flags){
                     point_stats.memnum += 1;
                     auto finddata = (adalru::Node<unsigned int, std::vector<key_type> >*) index_res.findleaf->slotdata[index_res.slot].second;
                     res.emplace_back(querykey);
                     res.insert(res.begin()+1,finddata->value.begin(),finddata->value.end());
                     index_res.findleaf->intrachain.moveTohead(finddata);// update intrachain
                     //                totalres.emplace_back(res);
-                    // 更新 interchain
+
                     filmmem->lru->put(index_res.findleaf->startkey,index_res.findleaf);
                 }
-                else{ //从磁盘读数据
+                else{
                     point_stats.disknum += 1;
                     point_stats.diskpagenum += 1;
-                    auto writeevict = (pair<unsigned int,unsigned int>*)index_res.findleaf->slotdata[index_res.slot].second;  //writeevict 指向的是 pageid and offset
+                    auto writeevict = (pair<unsigned int,unsigned int>*)index_res.findleaf->slotdata[index_res.slot].second;
 
                     res = pagedisk->odirectreadfromdisk(writeevict);    // if readfromdisk indicating doesn't use o_direct;
                     //                totalres.push_back(res);
                     res.erase(res.begin());
                     index_res.findleaf->slotdata[index_res.slot] = index_res.findleaf->intrachain.put(index_res.slot,res);
 
-                    filmmem->lru->put(index_res.findleaf->startkey,index_res.findleaf);// 更新 interchain
+                    filmmem->lru->put(index_res.findleaf->startkey,index_res.findleaf);
                     filmmem->evictPoss.emplace_back(writeevict);
                     filmindex->inkeynum++;
                     filmindex->exkeynum--;
@@ -987,7 +891,7 @@ namespace filminsert{
         }
 
         gettimeofday(&qt2, NULL);
-        cout<<"my Lord, You are my refuge~~~~forever! "<<endl;
+        //cout<<"my Lord, You are my refuge~~~~forever! "<<endl;
         timeuse = (qt2.tv_sec - qt1.tv_sec) + (double) (qt2.tv_usec - qt1.tv_usec) / 1000000.0;
         point_stats.querytimeuse += timeuse;
         point_stats.querytimeuse -= point_stats.computetimeuse;
@@ -1038,14 +942,13 @@ namespace filminsert{
 
         vector<key_type> payload(filminsert.valuesize);
 
-        // 执行数据插入        // 记录数据插入的时间
         struct timeval bt1, bt2;
         double buildtimeuse;
         gettimeofday(&bt1, NULL);
-        memoryfilm.append(keys,payload,errbnd,errbnd);    // 执行数据append ，逐个更新
+        memoryfilm.append(keys,payload,errbnd,errbnd);
         gettimeofday(&bt2, NULL);
         buildtimeuse = (bt2.tv_sec - bt1.tv_sec) + (double) (bt2.tv_usec - bt1.tv_usec) / 1000000.0;
-        cout << "insert time use = " << buildtimeuse << " , thank You, my Lord " << endl;
+        //cout << "insert time use = " << buildtimeuse << " , thank You, my Lord " << endl;
         ofstream savefile;
         savefile.open("/home/wamdm/chaohong/clionDir/Opt_FILMupdate/result/adalru_film_performance.txt",ios::app);
         savefile<< "method " << "film_ada_lru "<<"available_memory " << mem_threshold << " qtype "<< "point " << "error " << errbnd  << " pagesize "<< (pagesize*8/1024) << "k recordsize ";
@@ -1069,10 +972,8 @@ namespace filminsert{
         }
         cout << endl;
 
-//
-
         memoryfilm.lru->capacity = memoryfilm.lru->size;
-        // 判断是否需要transfer，并执行transfer
+
         pair<bool,memoryusage> transflag = memoryfilm.judgetransfer();
         int transleaves;
         double ratio;
@@ -1091,12 +992,11 @@ namespace filminsert{
                         transleaves = 1;
                     else
                         transleaves = 3;                }
-                cout<< "Jesus, please help me!"<< endl;
             }
             memoryfilm.filmtransfer(transleaves,&diskfilm);
             transflag = memoryfilm.judgetransfer();
         }
-        cout<< "Jesus, thank You! finish data transfer"<< endl;
+        cout<< "finish data transfer"<< endl;
         savefile.open("/home/wamdm/chaohong/clionDir/Opt_FILMupdate/result/adalru_film_performance.txt",ios::app);
         map<string,double>::iterator iter;
         savefile<< "method " << "film_ada_lru ";
@@ -1108,7 +1008,7 @@ namespace filminsert{
 
         pair<access_stats, vector<vector<key_type>>> point_performance = filmadapointquery(&filminsert, queries, queryn,&diskfilm,&memoryfilm);
         point_performance.first.zipffactor = zipf;
-        cout<< " Jesus, finished the point query test with film-adaptivelru, the performance is:"<<endl;
+        cout<< " finished the point query test with film-adaptivelru, the performance is:"<<endl;
         point_performance.first.print_stats();
         point_performance.second.clear();
         for (int i = 0;i<memoryfilm.index->leaflevel.leafpieces.size();i++){
@@ -1116,149 +1016,11 @@ namespace filminsert{
             memoryfilm.index->leaflevel.leafpieces[i] = NULL;
         }
 
-
         fs.open(diskfile,ios::in);
         if (fs){
             remove(diskfile);
         }
-
         return 0;
-
-
-
-    }
-
-    int test_filma_cacheppending(unsigned int errbnd, size_t datanum, int pagesize, string dataset,double mem_threshold,double reserveMem,int recordSize,vector<key_type> keys,vector<key_type> queries, int queryn, size_t numkey,int datasize,double zipf){
-        filmadatype filminsert(datanum,errbnd,errbnd);
-        filmadalrutype interchain(numkey);
-        filminsert.valuesize = recordSize-1;
-        std::ostringstream osse,ossr,ossd,ossm,ossp;
-        osse << errbnd;   ossp << pagesize;  ossm << mem_threshold;    ossr << (recordSize);  ossd << datanum;
-        string diskpath = "/home/wamdm/chaohong/clionDir/FeasFearCPP/diskpath/";
-        string file_str = diskpath+ dataset +"_filminsertpages"+ossd.str()+"_"+ ossm.str()+"_"+ossp.str()+"_"+ossr.str()+"_"+osse.str();
-        const char* diskfile = file_str.c_str() ;
-        int numrecord = pagesize/(recordSize);
-        filmstorage::filmmemory<key_type,vector<key_type>,filmadatype, filmadalrutype,filmadadisk> memoryfilm(numkey,mem_threshold,&filminsert,&interchain) ;
-        filmstorage::filmdisk<key_type> diskfilm(diskfile,pagesize,numrecord,recordSize);
-        memoryfilm.reserveMem = reserveMem;
-        fstream fs;
-        fs.open(diskfile,ios::in);
-        if (fs){
-            remove(diskfile);
-        }
-
-        int fd = -1;
-        int ret = -1;
-        uint64_t file_size = 2*datasize*1024*1024ULL;
-
-        fd = open(diskfile, O_CREAT|O_RDWR, 0666);
-        if(fd < 0){
-            printf("fd < 0");
-            return -1;
-        }
-
-        //ret = fallocate(fd, 0, 0, file_size);
-        ret = posix_fallocate(fd, 0, file_size);
-        if(ret < 0 ){
-            printf("ret = %d, errno = %d,  %s\n", ret, errno, strerror(errno));
-            return -1;
-        }
-
-        printf("fallocate create %.2fG file\n", file_size/1024/1024/1024.0);
-        close(fd);
-
-
-        vector<key_type> payload(filminsert.valuesize);
-
-        // 执行数据插入        // 记录数据插入的时间
-        struct timeval bt1, bt2;
-        double buildtimeuse;
-        gettimeofday(&bt1, NULL);
-        memoryfilm.cache_append(keys,payload,errbnd,errbnd);    // 执行数据append ，逐个更新
-        gettimeofday(&bt2, NULL);
-        buildtimeuse = (bt2.tv_sec - bt1.tv_sec) + (double) (bt2.tv_usec - bt1.tv_usec) / 1000000.0;
-        cout << "insert time use = " << buildtimeuse << " , thank You, my Lord " << endl;
-        ofstream savefile;
-        savefile.open("/home/wamdm/chaohong/clionDir/Opt_FILMupdate/result/adalru_film_performance.txt",ios::app);
-        savefile<< "method " << "film_ada_lru "<<"available_memory " << mem_threshold << " qtype "<< "point " << "error " << errbnd  << " pagesize "<< (pagesize*8/1024) << "k recordsize ";
-        savefile<< recordSize << " build_time " << buildtimeuse << " dataset " << dataset <<" datasize " << datasize << " keynum "<<numkey << " ";
-        savefile << "\n";
-        savefile << flush;
-        savefile.close();
-
-
-//      show the statistic information of film
-        auto filminfo = filminsert.show_verify();
-        map<string, double>::reverse_iterator   iter2;
-        for(iter2 = filminfo.rbegin(); iter2 != filminfo.rend(); iter2++){
-            cout<<iter2->first<<" "<<iter2->second<<" *** ";
-        }
-        cout<< endl;
-        auto leafinfo = filminsert.traverse_leaves();
-        cout<< dataset << "  " ;
-        for (int i = 0; i< leafinfo.size(); i ++){
-            cout<< leafinfo[i]<< "  ";
-        }
-        cout << endl;
-
-//
-
-        memoryfilm.lru->capacity = memoryfilm.lru->size;
-        // 判断是否需要transfer，并执行transfer
-        pair<bool,memoryusage> transflag = memoryfilm.judgetransfer();
-        int transleaves;
-        double ratio;
-        int leaves = transflag.second.meminfo["leaves"];
-        while (transflag.first)
-        {
-            if (filminsert.leafsplit == 0){
-                ratio = memoryfilm.threshold/transflag.second.totalusemem;
-                transleaves = (leaves - filminsert.leafsplit) * (1-ratio) ;  // the transfer number of leafs
-            }
-            else{
-                ratio = memoryfilm.threshold/transflag.second.totalusemem;
-                transleaves = (leaves - filminsert.leafsplit) * (1-ratio);
-                if (transleaves ==0){
-                    if (errbnd>=32)
-                        transleaves = 1;
-                    else
-                        transleaves = 3;                }
-                cout<< "Jesus, please help me!"<< endl;
-            }
-            memoryfilm.filmtransfer(transleaves,&diskfilm);
-            transflag = memoryfilm.judgetransfer();
-        }
-        cout<< "Jesus, thank You! finish data transfer"<< endl;
-        savefile.open("/home/wamdm/chaohong/clionDir/Opt_FILMupdate/result/adalru_film_performance.txt",ios::app);
-        map<string,double>::iterator iter;
-        savefile<< "method " << "film_ada_lru ";
-        for(iter = transflag.second.meminfo.begin(); iter != transflag.second.meminfo.end(); iter++)
-            savefile<<iter->first<<" "<<iter->second<<" ";
-        savefile <<"\n";
-        savefile << flush;
-        savefile.close();
-/*
-        pair<access_stats, vector<vector<key_type>>> point_performance = filmadapointquery(&filminsert, queries, queryn,&diskfilm,&memoryfilm);
-        point_performance.first.zipffactor = zipf;
-        cout<< " Jesus, finished the point query test with film-adaptivelru, the performance is:"<<endl;
-        point_performance.first.print_stats();
-        point_performance.second.clear();
-
-*/
-        for (int i = 0;i<memoryfilm.index->leaflevel.leafpieces.size();i++){
-            delete memoryfilm.index->leaflevel.leafpieces[i];
-            memoryfilm.index->leaflevel.leafpieces[i] = NULL;
-        }
-
-        fs.open(diskfile,ios::in);
-        if (fs){
-            remove(diskfile);
-        }
-
-        return 0;
-
-
-
     }
 
 
@@ -1303,11 +1065,10 @@ namespace filminsert{
 
         vector<key_type> payload(filmupdate.valuesize);
 
-        // 执行数据插入        // 记录数据插入的时间
         struct timeval bt1, bt2;
         double buildtimeuse;
 
-        memoryfilm.append(keys,payload,errbnd,errbnd);    // 执行数据append ，逐个更新
+        memoryfilm.append(keys,payload,errbnd,errbnd);
         gettimeofday(&bt1, NULL);
         memoryfilm.update(update_keys,payload);
         gettimeofday(&bt2, NULL);
@@ -1338,7 +1099,7 @@ namespace filminsert{
 
 
         memoryfilm.lru->capacity = memoryfilm.lru->size;
-        // 判断是否需要transfer，并执行transfer
+
         pair<bool,memoryusage> transflag = memoryfilm.judgetransfer();
         int transleaves;
         double ratio;
@@ -1357,12 +1118,12 @@ namespace filminsert{
                         transleaves = 1;
                     else
                         transleaves = 3;                }
-                cout<< "Jesus, please help me!"<< endl;
+                //cout<< "Jesus, please help me!"<< endl;
             }
             memoryfilm.filmtransfer(transleaves,&diskfilm);
             transflag = memoryfilm.judgetransfer();
         }
-        cout<< "Jesus, thank You! finish data transfer"<< endl;
+        cout<< "finish data transfer"<< endl;
         savefile.open("/home/wamdm/chaohong/clionDir/Opt_FILMupdate/result/adalru_film_performance.txt",ios::app);
         map<string,double>::iterator iter;
         savefile<< "method " << "film_ada_lru ";
@@ -1374,7 +1135,7 @@ namespace filminsert{
 
         pair<access_stats, vector<vector<key_type>>> point_performance = filmadapointquery(&filmupdate, queries, queryn,&diskfilm,&memoryfilm);
         point_performance.first.zipffactor = zipf;
-        cout<< " Jesus, finished the point query test with film-adaptivelru, the performance is:"<<endl;
+        cout<< " finished the point query test with film-adaptivelru, the performance is:"<<endl;
         point_performance.first.print_stats();
         point_performance.second.clear();
         for (int i = 0;i<memoryfilm.index->leaflevel.leafpieces.size();i++){
@@ -1387,10 +1148,7 @@ namespace filminsert{
             remove(diskfile);
         }
         return 0;
-
     }
-
-
 
 }
 

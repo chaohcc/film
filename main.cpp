@@ -22,51 +22,10 @@
 #define MAX_INT    (((unsigned int)(-1))>>1)
 
 
-
-// 可用代码?
-
-
 typedef long int key_type;  // if (filename== "books" || filename == "wiki_ts")
 //typedef double key_type;   //if (filename== "astro_ra" || filename == "random0.5")
 
 
-int test_cacheappending(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned int errbnd){
-    std::cout << "my Lord, i need You, i trust in You! test the film" << std::endl;
-    struct timeval t1, t2;
-    double timeuse;
-
-    unsigned long int numkey = ceil(double(datasize*1024*1024)/numcolumn/8);  //int datanum,
-    vector<key_type> load_data = loaddata<key_type>(filename,numkey);
-    double reserveMem = 5;
-    memThreshold -= reserveMem;
-    int queryn = 100000;
-    double zipf = 1.25;   //zipfian factor
-//    vector<key_type> load_pointquery1 ;
-    vector<key_type> load_pointquery ;
-
-    std::cout << "my Lord, i need You, i trust in You!!!!!" << std::endl;
-    gettimeofday(&t1, NULL);
-    unsigned int errs[] = { 4,16,64,256,1024,4096,16384,65536,262144};  //4,16,64,256,1024,4096,16384,65536,262144
-    gettimeofday(&t1, NULL);
-    for (int i = 0; i < (end(errs)-begin(errs));i++){
-        gettimeofday(&t1, NULL);
-        cout<<"the data set is "<<filename<<",  the data size is "<<datasize<<"M"<< "  numkey is "<<numkey<<endl;
-        cout<<"the number of keys is "<<numkey<<", the record size is "<<numcolumn<<endl;
-        cout<<"the page size is "<<pagesize*8<<",  the available memory is "<< memThreshold<< endl;
-
-        errbnd = errs[i];   //zipfian factor
-        load_pointquery = loadpquery<key_type>(filename,queryn,numkey,zipf,"point");
-        filminsert::test_filma_cacheppending(errbnd,numkey,pagesize,filename,memThreshold,reserveMem,numcolumn,load_data,load_pointquery,queryn,numkey,datasize,zipf);
-
-
-        gettimeofday(&t2, NULL);
-        timeuse = (t2.tv_sec - t1.tv_sec) + (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
-
-        cout << "able o_direct disk access time = " << timeuse << endl;  //输出时间（单位：ｓ）
-    }
-    return 0;
-
-}
 
 int test_appending(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned int errbnd){
     std::cout << "my Lord, i need You, i trust in You! test the film" << std::endl;
@@ -79,10 +38,8 @@ int test_appending(string filename, double memThreshold, long int datasize, long
     memThreshold -= reserveMem;
     int queryn = 100000;
     double zipf = 1.25;   //zipfian factor
-//    vector<key_type> load_pointquery1 ;
     vector<key_type> load_pointquery ;
 
-    std::cout << "my Lord, i need You, i trust in You!!!!!" << std::endl;
     gettimeofday(&t1, NULL);
     unsigned int errs[] = {16};  //4,16,64,256,1024,4096,16384,65536,262144
 
@@ -108,18 +65,16 @@ int test_appending(string filename, double memThreshold, long int datasize, long
 }
 
 
-//按空格分隔，返回vector<std::string>类型。有时间想想怎么把这个函数搞成我所有程序都能引入头文件直接用的。
 vector<string> split(string text) {
-    regex ws_re("\\s+"); // 这个可以把所有空格都挖掉      而如果是regex ws_re("");就只能删掉第一个空格
-    //测试一下这个字符串就明白区别了  "Quick brown    fox."
+    regex ws_re("\\s+");
     vector<string> vector(sregex_token_iterator(text.begin(), text.end(), ws_re, -1),sregex_token_iterator());
     return vector;
 }
 
 
 vector<key_type> random_fun(vector<key_type> &row_vector,unsigned int data_num,double update_ratio){
-//    function: 实现从原始序列中随机抽取 update_ratio 的数据放入 updata_vec 中（unorder，可以shuffle 一下），并从原始序列中剔除掉update 中的值，依然保持有序
-//    srand(5); //伪随机
+
+//    srand(5);
     rand();
     unsigned int update_num = data_num * update_ratio;
     vector<key_type> update_vec;
@@ -181,7 +136,7 @@ vector<key_type> random_fun(vector<key_type> &row_vector,unsigned int data_num,d
 
 
 int test_updating(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned int errbnd,double update_ratio,double zipf){
-    std::cout << "my Lord, i need You, i trust in You! test film appending" << std::endl;
+    //std::cout << "my Lord, i need You, i trust in You!  test_updating" << std::endl;
     struct timeval t1, t2;
     double timeuse;
 
@@ -190,12 +145,10 @@ int test_updating(string filename, double memThreshold, long int datasize, long 
     double reserveMem = 5;
     memThreshold -= reserveMem;
     int queryn = 100000;
-//    double zipf = 1.25;   //zipfian factor
 
     vector<key_type> load_pointquery ;
     vector<key_type> update_vec;
 
-    std::cout << "my Lord, i need You, i trust in You!!!!!" << std::endl;
     gettimeofday(&t1, NULL);
 
     cout<<"the data set is "<<filename<<",  the data size is "<<datasize<<"M"<< "  numkey is "<<numkey<<endl;
@@ -209,7 +162,7 @@ int test_updating(string filename, double memThreshold, long int datasize, long 
     gettimeofday(&t2, NULL);
     timeuse = (t2.tv_sec - t1.tv_sec) + (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
 
-    cout << "able o_direct disk access time = " << timeuse << endl;  //输出时间（单位：ｓ）
+    cout << "able o_direct disk access time = " << timeuse << endl;
     return 0;
 }
 
@@ -217,7 +170,7 @@ int test_updating(string filename, double memThreshold, long int datasize, long 
 
 int main() {
 
-    std::cout << "my Lord, i need You, i trust in You! start the experiment " << std::endl;
+    //std::cout << "my Lord, i need You, i trust in You! start the experiment " << std::endl;
     unsigned int errbnd = 8;
     double memThreshold = 512;
     int pagesize = 1024*64/8;
@@ -228,14 +181,13 @@ int main() {
 //    test_lru_overhead(datasize,memThreshold);
 
     datasize = 4096;
-    memThreshold = 9000+256;
-//    filename = "books";
+    memThreshold = 2048;
+    filename = "books";
     //    filename = "wiki_ts";
-//    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+    //    filename = "random0.5";
+    //    filename = "astro_ra";
     filename = "wiki_ts";
-//    filename = "random0.5";
-
-    double update_ratio = 0.001;
+    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
     errbnd = 16 ;
     /*
     double update_ratios[] = {0.0001,0.0001};  //0.00001,0.0001,0.001,0.00001,0.0001,0.001  0.0001,0.0001,0.0001,0.001,0.001,0.001,0.01,0.01,0.01
@@ -248,30 +200,9 @@ int main() {
         }
     }
     */
-    /*
+
     test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-    */
 
-    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-//    filename = "astro_ra";
-    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-//    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-//    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-
-//    filename = "books";
-//    filename = "astro_ra";
-//    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-//    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-//    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-//    test_cacheappending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-
-    //    filename = "astro_ra";
-
-//    filename = "random0.5";
-//    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
-//    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
     return 0;
 }
 
