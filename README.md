@@ -11,9 +11,9 @@ You will need to compile the program with at least the C++17 standard (e.g., '-s
 In this repository, you can compile and run film with [main.cpp]
 
 There are some examples in [main.cpp]
-    -- test_interleave_insert_query: test the workload that interleave between inserts and queries,
-    -- test_out_of_order_insertion: test out-of-order insertion, control by parameter out_of_order_frac
-    -- test_query_baseline: test the query workload that with a fixed number of point and/or range queries
+        -- test_interleave_insert_query: test the workload that interleave between inserts and queries,
+        -- test_out_of_order_insertion: test out-of-order insertion, control by parameter out_of_order_frac
+        -- test_query_baseline: test the query workload that with a fixed number of point and/or range queries
 
 
 
@@ -28,31 +28,31 @@ need to modify (typedef double key_type;) or (typedef long int key_type;)  in [f
 
 the header file about datasets is data.h
 
--- 'loaddata'
--- get the searched keys at runtime
-    ----'get_search_keys_zipf'
-    ----'get_search_keys'
-    ----'get_search_keys_scrambledzipf'
-    ----'get_search_keys_hotspot'
+    -- 'loaddata'
+    -- get the searched keys at runtime
+        ----'get_search_keys_zipf'
+        ----'get_search_keys'
+        ----'get_search_keys_scrambledzipf'
+        ----'get_search_keys_hotspot'
 
--- get the searched ranges at runtime
-    ----'get_search_ranges_zipf'
-    ----'get_search_ranges'
-    ----'get_search_ranges_scrambledzipf'
-    ----'get_search_ranges_hotspot'
+    -- get the searched ranges at runtime
+        ----'get_search_ranges_zipf'
+        ----'get_search_ranges'
+        ----'get_search_ranges_scrambledzipf'
+        ----'get_search_ranges_hotspot'
 
--- 'loadpquery'  (pre-generated searched keys)
--- 'loadrquery' (pre-generated searched keys)
+    -- 'loadpquery'  (pre-generated searched keys)
+    -- 'loadrquery' (pre-generated searched keys)
 
 film.h:
-    --- test_interleave_insert_query
-    --- search_one
-    --- search_range
-    --- append_one
+        --- test_interleave_insert_query
+        --- search_one
+        --- search_range
+        --- append_one
 
 filmadalru.h: the header file about adaptive LRU
-    --- globalchain: hashLRU
-    --- localchian: localLRU
+        --- globalchain: hashLRU
+        --- localchian: localLRU
 
 filmadastorage.h:
 the header file about data transfer, disk access, cold data eviction
