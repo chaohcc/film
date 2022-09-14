@@ -20,10 +20,14 @@ namespace adalru {
         Node(Key k, Value v) : key(k), value(v), prev(nullptr), next(nullptr) {};
 
         Node() : key(), value(), prev(nullptr), next(nullptr) {};
-
+        ~Node(){
+            prev = nullptr;
+            next = nullptr;
+        }
+//    Node(): prev(nullptr), next(nullptr){ };
     };
 
-    template<class Key, class Value, class mapvalue>
+    template<class Key, class Value, class mapvalue>   //mapvalue 是指向在 lru 中的node 的指针  在hash map 中使用
     class hashLRU {
 
     public:
@@ -52,7 +56,7 @@ namespace adalru {
 
         // get the k node in LRU and move it to the head of LRU
         Node<Key, Value> *get(Key k) {
-            Node<Key, Value> *node = new Node<Key, Value>;
+            Node<Key, Value> *node;
             if (map.find(k) != map.end()) {
                 node = map[k];
                 moveTohead(node);
@@ -64,14 +68,15 @@ namespace adalru {
 
         }
 
-        Node<Key, Value> *appendhead(Node<Key, Value> *node) {
+        // 将node 插入到LRU 的head
+        void appendhead(Node<Key, Value> *node) {
             node->prev = head;
             node->next = head->next;
             head->next->prev = node;
             head->next = node;
-
         }
 
+        // 将 找到的node 移动到head
         void moveTohead(Node<Key, Value> *node) {
             if (node->prev == head) return;
             node->prev->next = node->next;
@@ -81,10 +86,11 @@ namespace adalru {
 
         // put the k node into the head of LRU
         void put(Key k, Value v) {
-            Node<Key, Value> *node = new Node<Key, Value>(k, v);
             if (map.find(k) == map.end()) // k is not existed in map
             {
+                Node<Key, Value> *node = new Node<Key, Value>(k, v);
                 map[k] = node;
+                // 判断 size, 如果size = capacity,说明LRU 满了
                 if (size == capacity) {
                     poptail();
                 }
@@ -97,28 +103,33 @@ namespace adalru {
         }
 
         //remove the k node from LRU
-        void remove(Key k) {
-
-            if (map.find(k) == map.end()) return;
-            Node<Key, Value> *node = new Node<Key, Value>;
-            node = map[k];
+        forceinline void remove(Key k) {
+            // 首先找到k 所属的node
+            if (map.find(k) == map.end()) return; // 说明要删除的node 不存在
+            Node<Key, Value> *node = map[k];
             node->prev->next = node->next;
             node->next->prev = node->prev;
             map.erase(k);
+//            malloc_trim(0);
             size -= 1;
         }
 
         //remove the k node from LRU
-        void removenode(Node<Key, Value> *node) {
-
+        forceinline void removenode(Node<Key, Value> *node) {
+            // 首先找到k 所属的node
             node->prev->next = node->next;
             node->next->prev = node->prev;
-            map.erase(node->key);
+            if (map.find(node->key) == map.end()){
+                cout<< "i need You, my lovely Lord, please come"<< endl;
+            }
+            else
+                map.erase(node->key);
+//            malloc_trim(0);
             size -= 1;
         }
 
         // pop the tail of the LRU, that the least recent used item
-        Node<Key, Value> *poptail() {
+        forceinline Node<Key, Value> *poptail() {
 //            map.erase(tail->prev->key);
             map.erase(tail->prev->key);
             Node<Key, Value> *node;
@@ -137,6 +148,21 @@ namespace adalru {
             return tailnode->value;
         }
 
+        int deletelru(){
+
+            while (head->next!=NULL){
+                auto curnode = head->next;
+                curnode->prev = head;
+                head->next = curnode->next;
+                delete curnode;
+            }
+            delete head;
+//            delete[] tail;
+            std::unordered_map<Key, mapvalue>().swap(map);
+            malloc_trim(0);
+            return 0;
+        }
+
     };
 
     template<class Key, class Value>
@@ -153,16 +179,29 @@ namespace adalru {
             head->next = tail;
             tail->prev = head;
         }
+        void deletelru(){
+            while (head->next!=NULL){
+                auto curnode = head->next;
+                curnode->prev = head;
+                head->next = curnode->next;
+//                delete []curnode->value;
+//                curnode->value = NULL;
+                delete curnode;
+                curnode = NULL;
+            }
+//            malloc_trim(0);
+        }
 
-
-        Node<Key, Value> *appendhead(Node<Key, Value> *node) {
+        // 将node 插入到LRU 的head
+        forceinline Node<Key, Value> *appendhead(Node<Key, Value> *node) {
             node->prev = head;
             node->next = head->next;
             head->next->prev = node;
             head->next = node;
         }
 
-        void moveTohead(Node<Key, Value> *node) {
+        // 将 找到的node 移动到head
+        forceinline void moveTohead(Node<Key, Value> *node) {
             if (node->prev == head) return;
             node->prev->next = node->next;
             node->next->prev = node->prev;
@@ -170,17 +209,38 @@ namespace adalru {
         }
 
         // put the k node into the head of LRU
-        pair<bool,Node<Key, Value>*>  put(Key k, Value v) {
+        forceinline Node<Key, Value>*  put(Key k, Value v) {
             Node<Key, Value> *node = new Node<Key, Value>(k, v);
             size += 1;
             appendhead(node);
-
-            return pair<bool,Node<Key, Value>*> (true,node);
+//            if (k > 4294946590)
+//                cout<< "my Lord ,i need You!"<< endl;
+            return node;
         }
 
+//        pair<bool,Node<Key, Value>*>  put(Value data) {
+//
+//            Node<Key, Value> *node = new Node<Key, Value>(data[0], data);
+//            size += 1;
+//            appendhead(node);
+//            return pair<bool,Node<Key, Value>*> (true,node);
+//        }
 
-        void  modify(size_t pos) {
 
+        //remove the k node from LRU
+        forceinline void remove_node(Node<Key, Value> *node) {
+            node->prev->next = node->next;
+            node->next->prev = node->prev;
+            delete[] node->value;
+            delete node;
+//            malloc_trim(0);
+            size -= 1;
+        }
+
+        // modify the offset (key in lru node), 所有 nodes 中，key > pos 都都需要+ 1
+        forceinline void  modify(size_t pos) {
+            // 遍历 intro chain
+            // while 循环，直到找到node->key == k;
             Node<Key, Value> *node = head->next;
             while (node != tail)
             {
@@ -193,15 +253,9 @@ namespace adalru {
         }
 
 
-        //remove the k node from LRU
-       void remove_node(Node<Key, Value> *node) {
-            node->prev->next = node->next;
-            node->next->prev = node->prev;
-            size -= 1;
-        }
 
         // pop the tail of the local LRU, that the least recent used item
-        Node<Key, Value> *poptail() {
+        forceinline Node<Key, Value> *poptail() {
             Node<Key, Value> *node;
             node = tail->prev;
             tail->prev->prev->next = tail;

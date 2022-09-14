@@ -11,9 +11,10 @@
 #include <string.h>
 #include <iomanip>
 #include <sstream>
+
 #include <sys/time.h>
+
 #include<ctime>
-#include <regex>
 
 #include "data.h"
 #include "film.h"
@@ -22,147 +23,165 @@
 #define MAX_INT    (((unsigned int)(-1))>>1)
 
 
-typedef long int key_type;  // if (filename== "books" || filename == "wiki_ts")
-//typedef double key_type;   //if (filename== "astro_ra" || filename == "random0.5")
 
-
-
-int test_appending(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned int errbnd){
-    std::cout << "my Lord, i need You, i trust in You! test the film" << std::endl;
+int test_interleave_insert_query(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned int errbnd,double insert_frac){
+    std::cout << "my Lord, i need You, i trust in You! test film interleave insert (append&out-of-order insert)and query" << std::endl;
     struct timeval t1, t2;
     double timeuse;
 
-    unsigned long int numkey = ceil(double(datasize*1024*1024)/numcolumn/8);  //int datanum,
-    vector<key_type> load_data = loaddata<key_type>(filename,numkey);
-    double reserveMem = 5;
+    unsigned long int numkey = ceil(double(datasize*1024*1024)/numcolumn/8);  //int datanum
+    unsigned long actual_numkey = ceil(numkey*1.2);   // num_key and actual_numkey, the former is the at least number to be inserted to the index. the latter is the keys to guarantee the numkey
+    auto keys = new key_type[actual_numkey];
+    loaddata<key_type>(keys, filename,actual_numkey);
+    std::vector<key_type> load_data(keys,keys+actual_numkey);
+    double reserveMem = 10;
     memThreshold -= reserveMem;
-    int queryn = 100000;
-    double zipf = 1.25;   //zipfian factor
+
+    double zipf = 0.75;   //zipfian factor
+    string workload = "zipf";
+
+    std::cout << "my Lord, i need You, i trust in You!!!!!" << std::endl;
+    gettimeofday(&t1, NULL);
+
+
+    cout<<"the data set is "<<filename<<",  the data size is "<<datasize<<"M"<< "  numkey is "<<numkey<<endl;
+    cout<<"the number of keys is "<<load_data.size()<<", the record size is "<<numcolumn<<endl;
+    cout<<"the page size is "<<pagesize*8<<",  the available memory is "<< memThreshold<< endl;
+
+
+    unsigned long init_num_key = ceil(numkey*0.75);
+
+    unsigned long batch_size = 100000;  // ceil(numkey*0.1)
+    double out_of_order_fracs[] = {0.5};  //0.1,0.2,0.3,0.4,0.5,    0.01,0.001,0.0001,0.6,0.7,0.8
+    unsigned int thresholds[] = {5};
+    for (int i = 0; i  < (end(out_of_order_fracs)-begin(out_of_order_fracs));i++){
+        double out_of_order_frac = out_of_order_fracs[i];
+        for (int k = 0; k < end(thresholds)-begin(thresholds);k++){
+            unsigned int threshold = thresholds[k] * 10000;
+            filminsert::test_interleave_insert_query(errbnd,numkey,pagesize,filename,memThreshold,
+                                                     reserveMem,numcolumn,load_data,actual_numkey,datasize,zipf,init_num_key, insert_frac, out_of_order_frac, batch_size,workload,threshold);
+        }
+
+    }
+
+
+    gettimeofday(&t2, NULL);
+    timeuse = (t2.tv_sec - t1.tv_sec) + (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
+
+    cout << "able o_direct disk access time = " << timeuse << endl;  //输出时间（单位：ｓ）
+    return 0;
+}
+
+
+int test_out_of_order_insertion(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned short int errbnd){
+    double insert_frac[] = {0.5};  //0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9
+
+    for (int i = 0; i < (end(insert_frac)-begin(insert_frac));i++) {
+        double insert_ratio = insert_frac[i];   //// the total fraction of append and out-of-order inserts
+        test_interleave_insert_query(filename, memThreshold, datasize, numcolumn, pagesize,errbnd,insert_ratio);
+    }
+    return 0;
+}
+
+int test_query_baseline(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned short int errbnd){
+    std::cout << "my Lord, i need You, i trust in You! test the baselines" << std::endl;
+    struct timeval t1, t2;
+    double timeuse;
+
+    unsigned long int numkey = ceil(double(static_cast<unsigned long >(datasize)*1024*1024)/static_cast<unsigned long >(numcolumn)/8);
+    auto keys = new key_type[numkey];
+    loaddata<key_type>(keys, filename,numkey);
+    std::vector<key_type> load_data(keys,keys+numkey);
+    delete []keys;
+    double reserveMem = 5;
+    memThreshold = memThreshold-reserveMem;
+    unsigned int queryn = 100000;  // 100000
+    string workload = "zipfrandom";  //"random"
+    double zipf = 0.75;   //zipfian factor
     vector<key_type> load_pointquery ;
+    vector<vector<key_type>> load_rangequery;
 
-    gettimeofday(&t1, NULL);
-    unsigned int errs[] = {16};  //4,16,64,256,1024,4096,16384,65536,262144
 
+    std::cout << "my Lord, i need You, i trust in You!!!!!" << std::endl;
     gettimeofday(&t1, NULL);
-    for (int i = 0; i < (end(errs)-begin(errs));i++){
+    double zipfs[] = {0.75}; //,0.25,0.5,0.75,1.0,1.25,1.5
+    string workloads[] = {"zipf"};  ///"zipf","random","zipfrandom","hotspot"
+    gettimeofday(&t1, NULL);
+    for (int i = 0; i < (end(workloads)-begin(workloads));i++){
         gettimeofday(&t1, NULL);
         cout<<"the data set is "<<filename<<",  the data size is "<<datasize<<"M"<< "  numkey is "<<numkey<<endl;
         cout<<"the number of keys is "<<numkey<<", the record size is "<<numcolumn<<endl;
         cout<<"the page size is "<<pagesize*8<<",  the available memory is "<< memThreshold<< endl;
 
-        errbnd = errs[i];   //zipfian factor
-        load_pointquery = loadpquery<key_type>(filename,queryn,numkey,zipf,"point");
-        filminsert::test_filmappending(errbnd,numkey,pagesize,filename,memThreshold,reserveMem,numcolumn,load_data,load_pointquery,queryn,numkey,datasize,zipf);
+        workload = workloads[i];   //zipfian factor
+
+//        load_rangequery = loadrquery<vector<key_type>,key_type>(filename,queryn,numkey,zipf,workload);
+        load_pointquery = loadpquery<key_type>(filename,queryn,numkey,zipf,workload);
+
+        filminsert::test_filmadaquery(errbnd,numkey,pagesize,filename,memThreshold,reserveMem,numcolumn,load_data,load_pointquery,load_rangequery,queryn,numkey,datasize,zipf,workload);
+
+        gettimeofday(&t2, NULL);
+        timeuse = (t2.tv_sec - t1.tv_sec) + (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
+        cout << "able o_direct disk access time = " << timeuse << endl;  //输出时间（单位：ｓ）
+    }
+
+    vector <key_type>().swap(load_data);
+    vector <key_type>().swap(load_pointquery);
+    vector <vector<key_type>>().swap(load_rangequery);
+
+
+
+
+    return 0;
+}
+
+
+int test_interleave_baselines(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned short int errbnd){
+    std::cout << "my Lord, i need You, i trust in You! test the interleave insert&query on baselines" << std::endl;
+    struct timeval t1, t2;
+    double timeuse;
+
+    unsigned long int numkey = ceil(double(datasize*1024*1024)/numcolumn/8);  //int datanum,
+    unsigned long actual_numkey = ceil(numkey*1.2);   // num_key and actual_numkey, the former is the at least number to be inserted to the index. the latter is the keys to guarantee the numkey
+    auto keys = new key_type[actual_numkey];
+    loaddata<key_type>(keys, filename,actual_numkey);
+    std::vector<key_type> load_data(keys,keys+actual_numkey);
+    delete []keys;
+    double reserveMem = 10;
+    memThreshold = memThreshold-reserveMem;
+//    string workload = "random";  //"random"
+    string workloads[] = {"zipf","random","zipfrandom","hotspot"};  ///"zipf","random","zipfrandom","hotspot"
+    double zipf = 0.75;   //zipfian factor
+
+    std::cout << "my Lord, i need You, i trust in You!!!!!" << std::endl;
+    gettimeofday(&t1, NULL);
+    unsigned long init_num_key = ceil(numkey*0.75);
+
+    unsigned int batch_size = 100000;   //100000
+//    double insertfracs[] = {0.5};
+    gettimeofday(&t1, NULL);
+    for (int i = 0; i  < (end(workloads)-begin(workloads));i++){
+//        double insertfrac = insertfracs[i];
+        double insertfrac = 0.5;
+        string workload = workloads[i];
+        filminsert::test_interleave_insert_query_baseline(errbnd,numkey,pagesize,filename,memThreshold,
+                                                 reserveMem,numcolumn,load_data,actual_numkey,datasize,zipf,init_num_key, insertfrac, 0.0, batch_size,workload);
+
+        gettimeofday(&t1, NULL);
+        cout<<"the data set is "<<filename<<",  the data size is "<<datasize<<"M"<< "  numkey is "<<numkey<<endl;
+        cout<<"the number of keys is "<<numkey<<", the record size is "<<numcolumn<<endl;
+        cout<<"the page size is "<<pagesize*8<<",  the available memory is "<< memThreshold<< endl;
+
 
 
         gettimeofday(&t2, NULL);
         timeuse = (t2.tv_sec - t1.tv_sec) + (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
-
         cout << "able o_direct disk access time = " << timeuse << endl;  //输出时间（单位：ｓ）
-    }
-    return 0;
-
-}
-
-
-vector<string> split(string text) {
-    regex ws_re("\\s+");
-    vector<string> vector(sregex_token_iterator(text.begin(), text.end(), ws_re, -1),sregex_token_iterator());
-    return vector;
-}
-
-
-vector<key_type> random_fun(vector<key_type> &row_vector,unsigned int data_num,double update_ratio){
-
-//    srand(5);
-    rand();
-    unsigned int update_num = data_num * update_ratio;
-    vector<key_type> update_vec;
-    update_vec.reserve(update_num);
-    std::ostringstream ossb,ossc;
-    ossb << update_ratio;
-    ossc << update_num;
-    string filepath = "/home/wamdm/chaohong/clionDir/Opt_FILMupdate/update_data/update_books" + ossb.str() + "_" + ossc.str() + ".txt";
-    string rowfilepath = "/home/wamdm/chaohong/clionDir/Opt_FILMupdate/update_data/row_books" + ossb.str() + "_" + ossc.str() + ".txt";
-/*
-    ofstream f(filepath, ios::app);
-    ofstream rowf(rowfilepath,ios::app);
-    for(unsigned int i = 0; i < update_num; i ++){
-        unsigned int sample_i = rand() % ((data_num-update_num-100)) +1;
-//        unsigned int sample_i= (rand()%(data_num-update_num-10));
-        update_vec.emplace_back(row_vector[sample_i]);
-        std::vector<key_type>::iterator it = row_vector.begin()+sample_i;
-        f<<row_vector[sample_i]<<" ";
-        row_vector.erase(it);
 
     }
-    for (unsigned long int i = 0; i < row_vector.size();i ++){
-        rowf<<row_vector[i]<<" ";
-    }
-*/
 
+    vector <key_type>().swap(load_data);
 
-    ifstream fin(filepath);
-    ifstream rowfin(rowfilepath);
-
-    std::string s;
-    std::string rows;
-    getline(fin, s);
-    getline(rowfin,rows);
-    key_type tmp;
-    key_type rowtmp;
-    vector<string> v = split(s);
-    vector<string> rowv = split(rows);
-    for (auto s1 :v) {
-        //getline(fin, s);
-        //istringstream istr1(s1);
-
-        std::istringstream iss (s1);
-        iss >> tmp;
-        update_vec.emplace_back(tmp);
-    }
-    row_vector.clear();
-    for (auto s1 :rowv) {
-        //getline(fin, s);
-        //istringstream istr1(s1);
-        std::istringstream iss (s1);
-        iss >> rowtmp;
-        row_vector.emplace_back(rowtmp);
-    }
-
-    //size_t insert_n = row_vector.size();
-    return update_vec;
-}
-
-
-int test_updating(string filename, double memThreshold, long int datasize, long int numcolumn, int pagesize,unsigned int errbnd,double update_ratio,double zipf){
-    //std::cout << "my Lord, i need You, i trust in You!  test_updating" << std::endl;
-    struct timeval t1, t2;
-    double timeuse;
-
-    unsigned long int numkey = ceil(double(datasize*1024*1024)/numcolumn/8);  //int datanum
-    vector<key_type> load_data = loaddata<key_type>(filename,numkey);
-    double reserveMem = 5;
-    memThreshold -= reserveMem;
-    int queryn = 100000;
-
-    vector<key_type> load_pointquery ;
-    vector<key_type> update_vec;
-
-    gettimeofday(&t1, NULL);
-
-    cout<<"the data set is "<<filename<<",  the data size is "<<datasize<<"M"<< "  numkey is "<<numkey<<endl;
-    cout<<"the number of keys is "<<load_data.size()<<", the record size is "<<numcolumn<<endl;
-    cout<<"the page size is "<<pagesize*8<<",  the available memory is "<< memThreshold << endl;
-    load_pointquery = loadpquery<key_type>(filename,queryn,numkey,zipf,"point");
-    update_vec = random_fun(load_data,numkey,update_ratio);
-
-    filminsert::test_filmupdating(errbnd,numkey,pagesize,filename,memThreshold,reserveMem,numcolumn,load_data,update_vec,load_pointquery,queryn,numkey,datasize,zipf,update_ratio);
-
-    gettimeofday(&t2, NULL);
-    timeuse = (t2.tv_sec - t1.tv_sec) + (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
-
-    cout << "able o_direct disk access time = " << timeuse << endl;
     return 0;
 }
 
@@ -170,39 +189,85 @@ int test_updating(string filename, double memThreshold, long int datasize, long 
 
 int main() {
 
-    //std::cout << "my Lord, i need You, i trust in You! start the experiment " << std::endl;
-    unsigned int errbnd = 8;
+    std::cout << "my Lord, i need You, i trust in You! start the experiment " << std::endl;
+    unsigned int errbnd = 16;
     double memThreshold = 512;
     int pagesize = 1024*64/8;
     string filename = "wiki_ts";  //queryname
     long int numcolumn = 16;
     long int datasize = 4096;
-    double zipfs[] = {0.25};
+    double zipf = 0.5;
 //    test_lru_overhead(datasize,memThreshold);
 
-    datasize = 4096;
-    memThreshold = 2048;
+    datasize = 2048*2;
+    memThreshold = 1024*2;
     filename = "books";
     //    filename = "wiki_ts";
-    //    filename = "random0.5";
-    //    filename = "astro_ra";
-    filename = "wiki_ts";
-    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//    filename = "astro_ra";
+
+
     errbnd = 16 ;
-    /*
-    double update_ratios[] = {0.0001,0.0001};  //0.00001,0.0001,0.001,0.00001,0.0001,0.001  0.0001,0.0001,0.0001,0.001,0.001,0.001,0.01,0.01,0.01
 
-    for (int i = 0; i < (end(update_ratios)-begin(update_ratios));i++) {
-        double update_ratio = update_ratios[i];   //zipfian factor
-        for (int j = 0; j <(end(zipfs)-begin(zipfs));j++ ){
-            double zipf = zipfs[j];
-            test_updating(filename, memThreshold, datasize, numcolumn, pagesize, errbnd,update_ratio,zipf);
-        }
-    }
-    */
+    // out-of-order insertion 的代码片段
+    datasize = 1024*4;
+    memThreshold = 2048;
+    filename = "astro_ra";
 
-    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//    memThreshold = 1024+512;
+//    filename = "wiki_ts";
+//    test_query_baseline(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
 
+
+//    test_out_of_order_insertion(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//
+//    memThreshold = 1024;
+//    filename = "wiki_ts";
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+
+//    memThreshold = 768;
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//
+//    memThreshold = 1536;
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+
+//    memThreshold = 1280;
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+
+//    memThreshold = 2048+512;
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+
+//    memThreshold = 1792;
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+
+
+//    test_out_of_order_insertion(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+
+
+//    datasize = 1024*4;
+//    memThreshold = 1024*2;
+//    filename = "wiki_ts";
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//    filename = "books";
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//    filename = "wiki_ts";
+//    test_interleave_baselines(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//    test_interleave_append_query(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+    // append, out-of-order insert, query
+
+//    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+
+//    filename = "astro_ra";
+
+//    filename = "random0.5";
+//    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
+//    test_appending(filename, memThreshold, datasize, numcolumn, pagesize,errbnd);
     return 0;
 }
 
+
+
+/*
+ *
+ */
