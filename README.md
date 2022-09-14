@@ -44,13 +44,14 @@ the header file about datasets is data.h
     -- 'loadpquery'  (pre-generated searched keys)
     -- 'loadrquery' (pre-generated searched keys)
 
-film.h: the core source file of film
+the core source file of film are in film.h, pwlf.h
+-- film.h: the core source file of film
         --- test_interleave_insert_query
         --- search_one
-                --- search_range
-                --- append_one
+        --- search_range
+        --- append_one
 
-filmadalru.h: the header file about adaptive LRU
+-- filmadalru.h: the header file about adaptive LRU
         --- globalchain: hashLRU
         --- localchian: localLRU
 
