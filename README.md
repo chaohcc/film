@@ -4,7 +4,7 @@ a fully learned index for larger-than-memory databases
 
 #
 
-### getting started
+### Getting started
 FILM can be used as a header-only library
 You will need to compile the program with at least the C++17 standard (e.g., '-std = c++17') in the [CMakeLists.txt]
 
@@ -13,11 +13,11 @@ In this repository, you can compile and run film with [main.cpp]
 There are some examples in [main.cpp]
     -- test_interleave_insert_query: test the workload that interleave between inserts and queries,
     -- test_out_of_order_insertion: test out-of-order insertion, control by parameter out_of_order_frac
-    -- test_query_baseline:
+    -- test_query_baseline: test the query workload that with a fixed number of point and/or range queries
 
 
 
-### datasets and data type
+### Datasets and data type
 You can also run this benchmark on your own dataset.
 change the filepath in [data.h]
 the format of your dataset need to be in either binary format or text format (one key per line).
