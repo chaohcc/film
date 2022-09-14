@@ -26,7 +26,7 @@ the datasets we used in paper are in text format, binary format are also support
 the currently support data type of keys are long int or double.
 need to modify (typedef double key_type;) or (typedef long int key_type;)  in [film.h]
 
-the header file about datasets is data.h
+the header file about datasets and workloads are data.h, zipf.h
 
     -- 'loaddata'
     -- get the searched keys at runtime
@@ -43,8 +43,9 @@ the header file about datasets is data.h
 
     -- 'loadpquery'  (pre-generated searched keys)
     -- 'loadrquery' (pre-generated searched keys)
+    
 
-the core source file of film are in film.h, pwlf.h
+the core source file of film are in film.h, filmadalru.h, filmadastorage, pwlf.h
 
         -- film.h: the core source file of film
                 --- test_interleave_insert_query
@@ -52,12 +53,16 @@ the core source file of film are in film.h, pwlf.h
                 --- search_range
                 --- append_one
 
--- filmadalru.h: the header file about adaptive LRU
-        --- globalchain: hashLRU
-        --- localchian: localLRU
+        -- filmadalru.h: the header file about adaptive LRU
+                --- globalchain: hashLRU
+                --- localchian: localLRU
 
-filmadastorage.h:
-the header file about data transfer, disk access, cold data eviction
+        -- filmadastorage.h: the header file about data transfer, disk access, cold data eviction
+        
+        -- pwlf.h: header file about subrange partion, build learned model
+                --- piece design
+                --- append segmentation
+              
 
 
 
