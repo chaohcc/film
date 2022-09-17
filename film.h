@@ -28,8 +28,8 @@
 #include "filmadalru.h"
 #include "zipf.h"
 
-//typedef long int key_type;  // if (filename== "books" || filename == "wiki_ts", "synthetic", "YCSB")
-typedef double key_type;   //if (filename== "astro_ra")
+typedef long int key_type;  // if (filename== "books" || filename == "wiki_ts", "synthetic", "YCSB")
+//typedef double key_type;   //if (filename== "astro_ra")
 
 #define forceinline inline __attribute__((__always_inline__))
 using namespace std;
@@ -1988,6 +1988,7 @@ namespace filminsert{
             }
 
             // 执行一次point query
+
             pair<key_type,key_type*> res;
             key_type querykey = pointqueries[i];
 //            if (querykey == 3176006677686915072 || querykey == 3004159460022892544 ||querykey ==  2919356911931049984 ||querykey == 2831290469306449920){
@@ -2088,42 +2089,43 @@ namespace filminsert{
                     filmindex->exkeynum--;
                 }
             }
+            // the end of point query
 
-/*
-            // 执行一次range query
+
+
+            // the code of execute range query
+            /*
             vector<pair<key_type,key_type*>> rres;
             key_type firstkey = rangequeries[i][0];
             key_type lastkey = rangequeries[i][1];
             gettimeofday(&xt1, NULL);
-            auto index_result = filmindex->search_range(firstkey,lastkey);
+            auto index_result = filmindex->search_range(firstkey,lastkey,&query_stats);
             gettimeofday(&xt2, NULL);
             xtimeuse = (xt2.tv_sec - xt1.tv_sec) + (double) (xt2.tv_usec - xt1.tv_usec) / 1000000.0;
             query_stats.xlookuptime += xtimeuse;
             pre_dict *dict = new pre_dict();
             range_prepass( filmmem,&index_result,&rres,dict,filmindex,&query_stats);
-// 判断 是否需要访问磁盘
-            if (dict->pagenum == 0){  // 数据都在内存
-//                cout<< "Jesus, happy birthday!" << endl;
+             // whether to access disk
+            if (dict->pagenum == 0){  // all the request data are in memory
                 query_stats.memnum += 1;
-                // 遍历rres，释放数组
             }
-            else if(rres.empty()) { //数据都在磁盘
-                range_read_from_disk(&rres, dict, filmmem, filmindex, pagedisk,&query_stats);// 根据prepass 的信息，从磁盘中读数据
+            else if(rres.empty()) { //all the request data are in  disk
+                range_read_from_disk(&rres, dict, filmmem, filmindex, pagedisk,&query_stats);// read data from disk according to the information of prepass  根据prepass 的信息，从磁盘中读数据
 
                 query_stats.disknum += 1;
                 query_stats.diskpagenum += dict->pagenum;
                 //cout << "i want in Your heart, my Lord!" << endl;
             }
-            else{   // 数据 在内存和磁盘中都有
+            else{   // the request data are in both memory and disk 数据 在内存和磁盘中都有
                 query_stats.crossnum += 1;
                 query_stats.crosspagenum += dict->pagenum;
                 //                cout<< "Jesus, sister nana needs You!"<<endl;
                 range_read_from_disk(&rres,dict,filmmem,filmindex,pagedisk,&query_stats);
             }
             delete dict;
-
             // the end of range query
             */
+
         }
 
 
@@ -2180,12 +2182,12 @@ namespace filminsert{
 
         key_type payload[filmada.valuesize]{};
 
-        // 执行数据插入        // 记录数据插入的时间
+        // data insertion
         struct timeval bt1, bt2;
         double buildtimeuse;
         gettimeofday(&bt1, NULL);
 //        memoryfilm.insert(keys,payload,errbnd,errbnd,&diskfilm);    // 执行数据插入
-        memoryfilm.append(keys, payload, errbnd, errbnd);    // 执行数据append ，逐个更新
+        memoryfilm.append(keys, payload, errbnd, errbnd);    // append data one by one 执行数据append ，逐个更新
         gettimeofday(&bt2, NULL);
         buildtimeuse = (bt2.tv_sec - bt1.tv_sec) + (double) (bt2.tv_usec - bt1.tv_usec) / 1000000.0;
 
@@ -2235,10 +2237,6 @@ namespace filminsert{
         cout<< " Jesus, finished the range+point query test with film-adaptivelru, the performance is:"<<endl;
         query_performance.print_stats();
 
-//        for (int i = 0;i<memoryfilm.index->leaflevel.size();i++){
-//            delete memoryfilm.index->leaflevel[i];
-//            memoryfilm.index->leaflevel[i] = NULL;
-//        }
         interchain.deletelru();
 
 
@@ -2247,148 +2245,9 @@ namespace filminsert{
             remove(diskfile);
         }
         malloc_trim(0);
-
-
         return 0;
 
-
     }
-
-
-    int test_filmappending(unsigned int errbnd, size_t datanum, int pagesize, string dataset,double mem_threshold,double reserveMem,int recordSize,vector<key_type> keys,vector<key_type> queries, int queryn, size_t numkey,int datasize,double zipf){
-        filmadatype filminsert(datanum,errbnd,errbnd);
-        filmadalrutype interchain(numkey);
-        filminsert.valuesize = recordSize-1;
-        std::ostringstream osse,ossr,ossd,ossm,ossp;
-        osse << errbnd;   ossp << pagesize;  ossm << mem_threshold;    ossr << (recordSize);  ossd << datanum;
-        string diskpath = "/home/wamdm/chaohong/clionDir/updatefilm/diskpath/";
-        string file_str = diskpath+ dataset +"_filminsertpages"+ossd.str()+"_"+ ossm.str()+"_"+ossp.str()+"_"+ossr.str()+"_"+osse.str();
-        const char* diskfile = file_str.c_str() ;
-        int numrecord = pagesize/(recordSize);
-        filmstorage::filmmemory<key_type,key_type*,filmadatype, filmadalrutype,filmadadisk> memoryfilm(numkey,mem_threshold,&filminsert,&interchain) ;
-        filmstorage::filmdisk<key_type> diskfilm(diskfile,pagesize,numrecord,recordSize);
-        memoryfilm.reserveMem = reserveMem;
-        fstream fs;
-        fs.open(diskfile,ios::in);
-        if (fs){
-            fs.close();
-            remove(diskfile);
-        }
-
-        int fd = -1;
-        int ret = -1;
-        uint64_t file_size = 2*datasize*1024*1024ULL;
-
-        fd = open(diskfile, O_CREAT|O_RDWR, 0666);
-        if(fd < 0){
-            printf("fd < 0");
-            return -1;
-        }
-
-        //ret = fallocate(fd, 0, 0, file_size);
-        ret = posix_fallocate(fd, 0, file_size);
-        if(ret < 0 ){
-            printf("ret = %d, errno = %d,  %s\n", ret, errno, strerror(errno));
-            return -1;
-        }
-
-        printf("fallocate create %.2fG file\n", file_size/1024/1024/1024.0);
-        close(fd);
-
-
-//        vector<key_type> payload(filminsert.valuesize);
-        key_type payload[filminsert.valuesize]{};
-
-        // 执行数据插入        // 记录数据插入的时间
-        struct timeval bt1, bt2;
-        double buildtimeuse;
-        gettimeofday(&bt1, NULL);
-        memoryfilm.append(keys,payload,errbnd,errbnd);    // 执行数据append ，逐个更新
-        gettimeofday(&bt2, NULL);
-        buildtimeuse = (bt2.tv_sec - bt1.tv_sec) + (double) (bt2.tv_usec - bt1.tv_usec) / 1000000.0;
-        cout << "insert time use = " << buildtimeuse << " , thank You, my Lord " << endl;
-        ofstream savefile;
-
-        savefile.open("/home/wamdm/chaohong/clionDir/updatefilm/result/adalru_film_performance.txt",ios::app);
-        savefile<< "method " << "film_ada_lru "<<"available_memory " << mem_threshold << " qtype "<< "point " << "error " << errbnd  << " pagesize "<< (pagesize*8/1024) << "k recordsize ";
-        savefile<< recordSize << " build_time " << buildtimeuse << " dataset " << dataset <<" datasize " << datasize << " keynum "<<numkey << " ";
-        savefile << "\n";
-        savefile << flush;
-        savefile.close();
-
-
-//      show the statistic information of film
-        auto filminfo = filminsert.show_verify();
-        map<string, double>::reverse_iterator   iter2;
-        for(iter2 = filminfo.rbegin(); iter2 != filminfo.rend(); iter2++){
-            cout<<iter2->first<<" "<<iter2->second<<" *** ";
-        }
-        cout<< endl;
-        auto leafinfo = filminsert.traverse_leaves();
-        cout<< dataset << "  " ;
-        for (int i = 0; i< leafinfo.size(); i ++){
-            cout<< leafinfo[i]<< "  ";
-        }
-        cout << endl;
-        memoryfilm.lru->capacity = memoryfilm.lru->size;
-        // 判断是否需要transfer，并执行transfer
-        pair<bool,memoryusage> transflag = memoryfilm.judgetransfer();
-        unsigned int transleaves;
-        double ratio;
-        int leaves = transflag.second.meminfo["leaves"];
-        while (transflag.first)
-        {
-            if (filminsert.leafsplit == 0){
-                ratio = memoryfilm.threshold/transflag.second.totalusemem;
-                transleaves = (leaves - filminsert.leafsplit) * (1-ratio) ;  // the transfer number of leafs
-            }
-            else{
-                ratio = memoryfilm.threshold/transflag.second.totalusemem;
-                transleaves = (leaves - filminsert.leafsplit) * (1-ratio);
-                if (transleaves ==0){
-                    if (errbnd>=32)
-                        transleaves = 1;
-                    else
-                        transleaves = 3;                }
-                cout<< "Jesus, please help me!"<< endl;
-            }
-            memoryfilm.filmtransfer(transleaves,&diskfilm);
-            transflag = memoryfilm.judgetransfer();
-        }
-        cout<< "Jesus, thank You! finish data transfer"<< endl;
-
-        savefile.open("/home/wamdm/chaohong/clionDir/updatefilm/result/adalru_film_performance.txt",ios::app);
-        map<string,double>::iterator iter;
-        savefile<< "method " << "film_ada_lru ";
-        for(iter = transflag.second.meminfo.begin(); iter != transflag.second.meminfo.end(); iter++)
-            savefile<<iter->first<<" "<<iter->second<<" ";
-        savefile<<"\n";
-        savefile << flush;
-        savefile.close();
-
-        pair<access_stats, vector<vector<key_type>>> point_performance = filmadapointquery(&filminsert, queries, queryn,&diskfilm,&memoryfilm);
-        point_performance.first.zipffactor = zipf;
-        cout<< " Jesus, finished the point query test with film-adaptivelru, the performance is:"<<endl;
-        point_performance.first.print_stats();
-        point_performance.second.clear();
-        for (int i = 0;i<memoryfilm.index->leaflevel.leafpieces.size();i++){
-            delete memoryfilm.index->leaflevel.leafpieces[i];
-            memoryfilm.index->leaflevel.leafpieces[i] = NULL;
-        }
-
-
-        fs.open(diskfile,ios::in);
-        if (fs){
-            fs.close();
-            remove(diskfile);
-        }
-
-        return 0;
-
-
-
-    }
-
 
 
     int test_interleave_insert_query_baseline(unsigned int errbnd,size_t numkey,int pagesize,string dataset,double mem_threshold,double reserveMem,
@@ -2459,7 +2318,6 @@ namespace filminsert{
         buildtimeuse = (oribt2.tv_sec - oribt1.tv_sec) + (double) (oribt2.tv_usec - oribt1.tv_usec) / 1000000.0;
         vector<key_type>().swap(init_keys);
 
-        // 判断bulk load 之后，是否需要transfer，并执行transfer
         pair<bool, memoryusage> transflag = memoryfilm.judgetransfer();
         unsigned int transleaves;
         double ratio;
@@ -2617,7 +2475,7 @@ namespace filminsert{
                             gettimeofday(&plt1, NULL);
                             filmada.sort_list->intrachain.moveTohead(finddata);// update intrachain
                             //                totalres.emplace_back(res);
-                            // 更新 interchain
+                            // update golbal chain ( interchain)
                             memoryfilm.lru->put(filmada.sort_list->slotkey[0], filmada.sort_list);
                             gettimeofday(&plt2, NULL);
                             pltimeuse =
@@ -2640,7 +2498,7 @@ namespace filminsert{
                             filmada.exkeynum--;
                         }
                     } else {
-                        if (index_res.flags) {// 从内存中读数据
+                        if (index_res.flags) {// read data from memory    从内存中读数据
                             query_stats.memnum += 1;
                             auto finddata = (adalru::Node<lruOff_type, key_type *> *) index_res.findleaf->slotdata[index_res.slot];
                             res.first = querykey;
@@ -2649,17 +2507,17 @@ namespace filminsert{
                             gettimeofday(&plt1, NULL);
                             index_res.findleaf->intrachain.moveTohead(finddata);// update intrachain
 
-                            // 更新 interchain
+                            // update global chain ( interchain)
                             memoryfilm.lru->put(index_res.findleaf->startkey, index_res.findleaf);
                             gettimeofday(&plt2, NULL);
                             pltimeuse =
                                     (plt2.tv_sec - plt1.tv_sec) + (double) (plt2.tv_usec - plt1.tv_usec) / 1000000.0;
                             query_stats.lrutime += pltimeuse;
-                        } else { //从磁盘读数据
+                        } else { // read data from disk   从磁盘读数据
                             query_stats.disknum += 1;
                             query_stats.diskpagenum += 1;
                             gettimeofday(&prdt1, NULL);
-                            auto writeevict = (pair<pageid_type, pageOff_type> *) index_res.findleaf->slotdata[index_res.slot];  //writeevict 指向的是 pageid and offset
+                            auto writeevict = (pair<pageid_type, pageOff_type> *) index_res.findleaf->slotdata[index_res.slot];  //writeevict: pageid and offset
 
                             if (writeevict->first == memoryfilm.inpage->pageid) {
                                 res.second = new key_type[filmada.valuesize];
@@ -2670,16 +2528,15 @@ namespace filminsert{
                                 }
                             } else {
                                 res = diskfilm.odirectreadfromdisk(
-                                        writeevict);    // if readfromdisk indicating doesn't use o_direct;
+                                        writeevict);
                             }
                             gettimeofday(&prdt2, NULL);
                             prdtimeuse = (prdt2.tv_sec - prdt1.tv_sec) +
                                          (double) (prdt2.tv_usec - prdt1.tv_usec) / 1000000.0;
                             query_stats.rdisktime += prdtimeuse;
-//                totalres.push_back(res);
-                            if (res.first != querykey) {
-                                cout << "not find, what's wrong? my Lord, i need You~~~~" << querykey << endl;
-                            }
+//                            if (res.first != querykey) {
+//                                cout << "not find, what's wrong? my Lord, i need You~~~~" << querykey << endl;
+//                            }
                             gettimeofday(&plt1, NULL);
                             index_res.findleaf->slotdata[index_res.slot] = index_res.findleaf->intrachain.put(
                                     index_res.slot, res.second);
@@ -2697,7 +2554,7 @@ namespace filminsert{
 
 
 
-                    // 执行一次range query
+                    // range query
                     /*
                     vector<pair<key_type, key_type *>> rres;
                     key_type firstkey = lookup_ranges[qi][0];
@@ -2738,7 +2595,7 @@ namespace filminsert{
 
                 }
 
-                // 记录lookup 的时间
+                // record the elapsed time of lookup
                 gettimeofday(&lookup_end_time, NULL);
                 lookup_elapsed_time = (lookup_end_time.tv_sec - lookup_start_time.tv_sec) +
                                       (double) (lookup_end_time.tv_usec - lookup_start_time.tv_usec) / 1000000.0;
@@ -2788,7 +2645,7 @@ namespace filminsert{
                     transflag = memoryfilm.judgetransfer(&query_stats);
                 }
 
-                // 将写出磁盘的时间算到插入时间里，更新插入的时间
+                //insert elapsed time  including the time of eviction  将写出磁盘的时间算到插入时间里，更新插入的时间
                 insert_elapsed_time = append_elapsed_time;
                 insert_elapsed_time += batch_insert_writetime;
                 cumulative_insert_time += insert_elapsed_time;
